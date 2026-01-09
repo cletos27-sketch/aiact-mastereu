@@ -11,192 +11,231 @@ interface Question {
   id: number;
   question: string;
   category: string;
+  riskType: "prohibited" | "high" | "limited" | "out_of_scope";
   helpText?: string;
-  options: {
-    value: string;
-    label: string;
-    riskWeight: number;
-  }[];
+  legalReference: string;
 }
 
 const questions: Question[] = [
   {
     id: 1,
-    category: "Identificação do Sistema",
-    question: "Qual é o principal objetivo do seu sistema de IA?",
-    helpText: "Anexo III do EU AI Act define categorias específicas de alto risco.",
-    options: [
-      { value: "biometric", label: "Identificação biométrica ou categorização de pessoas", riskWeight: 4 },
-      { value: "critical", label: "Gestão de infraestruturas críticas (energia, água, trânsito)", riskWeight: 4 },
-      { value: "education", label: "Educação e formação profissional", riskWeight: 3 },
-      { value: "employment", label: "Recrutamento, gestão de trabalhadores", riskWeight: 4 },
-      { value: "services", label: "Acesso a serviços essenciais (crédito, seguros)", riskWeight: 4 },
-      { value: "law", label: "Aplicação da lei ou justiça", riskWeight: 4 },
-      { value: "other", label: "Outro (chatbot, recomendações, automação)", riskWeight: 1 },
-    ],
+    category: "Práticas Proibidas",
+    question: "O sistema usa técnicas subliminares para manipular o comportamento?",
+    riskType: "prohibited",
+    helpText: "Sistemas que utilizam técnicas subliminares além da consciência de uma pessoa para distorcer substancialmente o seu comportamento são proibidos pelo AI Act.",
+    legalReference: "Artigo 5(1)(a)"
   },
   {
     id: 2,
-    category: "Identificação do Sistema",
-    question: "O sistema processa dados biométricos para identificar ou categorizar pessoas?",
-    helpText: "Dados biométricos incluem reconhecimento facial, de voz, impressões digitais, etc.",
-    options: [
-      { value: "realtime", label: "Sim, em tempo real em espaços públicos", riskWeight: 5 },
-      { value: "remote", label: "Sim, mas não em tempo real", riskWeight: 4 },
-      { value: "emotion", label: "Sim, para detecção de emoções", riskWeight: 3 },
-      { value: "no", label: "Não processa dados biométricos", riskWeight: 0 },
-    ],
+    category: "Práticas Proibidas",
+    question: "O sistema explora vulnerabilidades de grupos específicos (idade, deficiência)?",
+    riskType: "prohibited",
+    helpText: "É proibido explorar vulnerabilidades de um grupo específico de pessoas devido à sua idade, deficiência física ou mental.",
+    legalReference: "Artigo 5(1)(b)"
   },
   {
     id: 3,
-    category: "Identificação do Sistema",
-    question: "O sistema toma decisões que afetam significativamente direitos individuais?",
-    options: [
-      { value: "legal", label: "Sim, afeta direitos legais (contratos, emprego)", riskWeight: 4 },
-      { value: "financial", label: "Sim, afeta acesso a serviços financeiros", riskWeight: 4 },
-      { value: "social", label: "Sim, afeta benefícios ou serviços sociais", riskWeight: 4 },
-      { value: "limited", label: "Afeta de forma limitada ou auxiliar", riskWeight: 2 },
-      { value: "no", label: "Não toma decisões deste tipo", riskWeight: 0 },
-    ],
+    category: "Práticas Proibidas",
+    question: "O sistema faz 'Social Scoring' (pontuação social)?",
+    riskType: "prohibited",
+    helpText: "Sistemas de pontuação social por autoridades públicas que avaliam ou classificam pessoas com base no seu comportamento social são proibidos.",
+    legalReference: "Artigo 5(1)(c)"
   },
   {
     id: 4,
-    category: "Transparência",
-    question: "Os utilizadores sabem que estão interagindo com um sistema de IA?",
-    helpText: "O Artigo 52 exige transparência na interação com sistemas de IA.",
-    options: [
-      { value: "clear", label: "Sim, é claramente comunicado antes da interação", riskWeight: 0 },
-      { value: "partial", label: "Parcialmente, a informação existe mas não é destacada", riskWeight: 2 },
-      { value: "unclear", label: "Não está claro para o utilizador", riskWeight: 3 },
-      { value: "hidden", label: "A natureza IA é deliberadamente oculta", riskWeight: 5 },
-    ],
+    category: "Práticas Proibidas",
+    question: "O sistema é usado para identificação biométrica em tempo real em espaços públicos?",
+    riskType: "prohibited",
+    helpText: "A identificação biométrica remota em tempo real em espaços acessíveis ao público para fins de aplicação da lei é proibida, salvo exceções específicas.",
+    legalReference: "Artigo 5(1)(d)"
   },
   {
     id: 5,
-    category: "Transparência",
-    question: "O sistema gera conteúdo sintético (deepfakes, texto, áudio)?",
-    options: [
-      { value: "realistic", label: "Sim, conteúdo que pode parecer real", riskWeight: 3 },
-      { value: "labeled", label: "Sim, mas sempre marcado como IA", riskWeight: 1 },
-      { value: "no", label: "Não gera conteúdo sintético", riskWeight: 0 },
-    ],
+    category: "Alto Risco",
+    question: "A IA é usada em infraestruturas críticas (energia, água, transporte)?",
+    riskType: "high",
+    helpText: "Sistemas de IA utilizados como componentes de segurança na gestão e operação de infraestruturas críticas são de alto risco.",
+    legalReference: "Anexo III, ponto 2"
   },
   {
     id: 6,
-    category: "Dados e Privacidade",
-    question: "Que tipos de dados pessoais o sistema processa?",
-    options: [
-      { value: "special", label: "Dados sensíveis (saúde, etnia, religião, orientação sexual)", riskWeight: 4 },
-      { value: "biometric", label: "Dados biométricos ou genéticos", riskWeight: 4 },
-      { value: "personal", label: "Dados pessoais comuns (nome, email, localização)", riskWeight: 2 },
-      { value: "anonymized", label: "Apenas dados anonimizados ou agregados", riskWeight: 0 },
-      { value: "none", label: "Não processa dados pessoais", riskWeight: 0 },
-    ],
+    category: "Alto Risco",
+    question: "A IA é usada para avaliação/admissão em educação ou formação profissional?",
+    riskType: "high",
+    helpText: "Sistemas que determinam o acesso, admissão ou atribuição de pessoas a instituições de educação e formação profissional são de alto risco.",
+    legalReference: "Anexo III, ponto 3"
   },
   {
     id: 7,
-    category: "Dados e Privacidade",
-    question: "Como os dados de treino do sistema foram obtidos?",
-    options: [
-      { value: "consent", label: "Com consentimento explícito dos titulares", riskWeight: 0 },
-      { value: "public", label: "De fontes públicas ou abertas", riskWeight: 1 },
-      { value: "purchased", label: "Adquiridos de terceiros", riskWeight: 2 },
-      { value: "scraped", label: "Coletados automaticamente (web scraping)", riskWeight: 3 },
-      { value: "unknown", label: "Origem desconhecida ou não documentada", riskWeight: 4 },
-    ],
+    category: "Alto Risco",
+    question: "A IA é usada para recrutamento ou gestão de trabalhadores (RH)?",
+    riskType: "high",
+    helpText: "Sistemas usados para recrutamento, seleção, tomada de decisões sobre promoção e cessação de relações de trabalho são de alto risco.",
+    legalReference: "Anexo III, ponto 4"
   },
   {
     id: 8,
-    category: "Governança",
-    question: "Existe supervisão humana nas decisões do sistema?",
-    helpText: "O EU AI Act exige supervisão humana para sistemas de alto risco.",
-    options: [
-      { value: "full", label: "Sim, humanos validam todas as decisões críticas", riskWeight: 0 },
-      { value: "partial", label: "Sim, mas apenas para algumas decisões", riskWeight: 2 },
-      { value: "review", label: "Apenas revisão posterior, não prévia", riskWeight: 3 },
-      { value: "none", label: "O sistema opera de forma totalmente autônoma", riskWeight: 4 },
-    ],
+    category: "Alto Risco",
+    question: "A IA avalia a elegibilidade para serviços públicos essenciais?",
+    riskType: "high",
+    helpText: "Sistemas que avaliam a elegibilidade de pessoas para benefícios e serviços de assistência pública são de alto risco.",
+    legalReference: "Anexo III, ponto 5(a)"
   },
   {
     id: 9,
-    category: "Governança",
-    question: "Existem registros (logs) das decisões tomadas pelo sistema?",
-    helpText: "Logs de auditoria são obrigatórios para sistemas de alto risco.",
-    options: [
-      { value: "complete", label: "Sim, logs completos e imutáveis", riskWeight: 0 },
-      { value: "partial", label: "Sim, mas logs parciais ou modificáveis", riskWeight: 2 },
-      { value: "limited", label: "Apenas logs básicos de funcionamento", riskWeight: 3 },
-      { value: "none", label: "Não existe sistema de logging", riskWeight: 4 },
-    ],
+    category: "Alto Risco",
+    question: "A IA é usada para avaliação de crédito (Credit Scoring)?",
+    riskType: "high",
+    helpText: "Sistemas utilizados para avaliar a classificação de crédito ou a solvabilidade de pessoas singulares são de alto risco.",
+    legalReference: "Anexo III, ponto 5(b)"
   },
   {
     id: 10,
-    category: "Governança",
-    question: "A sua equipa recebeu formação sobre o EU AI Act e literacia em IA?",
-    helpText: "O Artigo 4 exige que operadores garantam literacia adequada em IA.",
-    options: [
-      { value: "comprehensive", label: "Sim, formação completa e documentada", riskWeight: 0 },
-      { value: "basic", label: "Formação básica ou informal", riskWeight: 2 },
-      { value: "planned", label: "Planeada mas não realizada", riskWeight: 3 },
-      { value: "none", label: "Sem formação em literacia de IA", riskWeight: 4 },
-    ],
+    category: "Alto Risco",
+    question: "A IA é usada por autoridades policiais ou migratórias?",
+    riskType: "high",
+    helpText: "Sistemas de IA utilizados por autoridades responsáveis pela aplicação da lei ou gestão de migração e controlo de fronteiras são de alto risco.",
+    legalReference: "Anexo III, pontos 6 e 7"
   },
   {
     id: 11,
-    category: "Técnico",
-    question: "O sistema foi testado para vieses ou discriminação?",
-    options: [
-      { value: "audited", label: "Sim, auditoria independente realizada", riskWeight: 0 },
-      { value: "internal", label: "Sim, testes internos documentados", riskWeight: 1 },
-      { value: "informal", label: "Apenas testes informais", riskWeight: 3 },
-      { value: "none", label: "Não foi testado para vieses", riskWeight: 4 },
-    ],
+    category: "Risco Limitado",
+    question: "O sistema interage diretamente com pessoas (Chatbots)?",
+    riskType: "limited",
+    helpText: "Sistemas de IA destinados a interagir diretamente com pessoas naturais estão sujeitos a obrigações de transparência.",
+    legalReference: "Artigo 52(1)"
   },
   {
     id: 12,
-    category: "Técnico",
-    question: "Existe documentação técnica completa do sistema?",
-    helpText: "Inclui arquitetura, dados de treino, métricas de desempenho e limitações.",
-    options: [
-      { value: "complete", label: "Sim, documentação completa e atualizada", riskWeight: 0 },
-      { value: "partial", label: "Documentação parcial", riskWeight: 2 },
-      { value: "minimal", label: "Apenas documentação básica", riskWeight: 3 },
-      { value: "none", label: "Sem documentação técnica", riskWeight: 4 },
-    ],
+    category: "Risco Limitado",
+    question: "O sistema gera ou manipula conteúdo de imagem, áudio ou vídeo (Deepfakes)?",
+    riskType: "limited",
+    helpText: "Sistemas que geram ou manipulam conteúdo sintético devem divulgar que o conteúdo foi gerado ou manipulado artificialmente.",
+    legalReference: "Artigo 52(3)"
+  },
+  {
+    id: 13,
+    category: "Práticas Proibidas",
+    question: "O sistema faz categorização de emoções em ambientes de trabalho?",
+    riskType: "prohibited",
+    helpText: "A categorização biométrica para inferir emoções de trabalhadores ou estudantes é proibida, salvo razões médicas ou de segurança.",
+    legalReference: "Artigo 5(1)(f)"
+  },
+  {
+    id: 14,
+    category: "Risco Limitado",
+    question: "O sistema gera textos para informar o público sobre assuntos de interesse geral?",
+    riskType: "limited",
+    helpText: "Textos publicados com o objetivo de informar o público sobre questões de interesse público devem divulgar a sua natureza artificial.",
+    legalReference: "Artigo 52(3)"
+  },
+  {
+    id: 15,
+    category: "Âmbito de Aplicação",
+    question: "O sistema é apenas para uso pessoal não profissional?",
+    riskType: "out_of_scope",
+    helpText: "O AI Act não se aplica a sistemas de IA desenvolvidos ou utilizados exclusivamente para fins pessoais não profissionais.",
+    legalReference: "Artigo 2(5)(c)"
   },
 ];
+
+type RiskClassification = "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO";
 
 const Assessment = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
 
   const progress = ((currentStep + 1) / questions.length) * 100;
   const currentQuestion = questions[currentStep];
 
   const handleAnswer = (value: string) => {
-    setAnswers({ ...answers, [currentQuestion.id]: value });
+    setAnswers({ ...answers, [currentQuestion.id]: value === "yes" });
+  };
+
+  const calculateRiskClassification = (): { classification: RiskClassification; score: number; triggeredQuestions: number[] } => {
+    const prohibitedQuestions = [1, 2, 3, 4, 13];
+    const highRiskQuestions = [5, 6, 7, 8, 9, 10];
+    const limitedRiskQuestions = [11, 12, 14];
+    const outOfScopeQuestion = 15;
+
+    const triggeredQuestions: number[] = [];
+
+    // Check if out of scope first
+    if (answers[outOfScopeQuestion] === true) {
+      triggeredQuestions.push(outOfScopeQuestion);
+      return { classification: "FORA_DE_ESCOPO", score: 0, triggeredQuestions };
+    }
+
+    // Check prohibited practices (highest priority)
+    for (const qId of prohibitedQuestions) {
+      if (answers[qId] === true) {
+        triggeredQuestions.push(qId);
+      }
+    }
+    if (triggeredQuestions.length > 0) {
+      return { classification: "PROIBIDO", score: 100, triggeredQuestions };
+    }
+
+    // Check high risk
+    for (const qId of highRiskQuestions) {
+      if (answers[qId] === true) {
+        triggeredQuestions.push(qId);
+      }
+    }
+    if (triggeredQuestions.length > 0) {
+      return { classification: "ALTO_RISCO", score: 75, triggeredQuestions };
+    }
+
+    // Check limited risk
+    for (const qId of limitedRiskQuestions) {
+      if (answers[qId] === true) {
+        triggeredQuestions.push(qId);
+      }
+    }
+    if (triggeredQuestions.length > 0) {
+      return { classification: "RISCO_LIMITADO", score: 40, triggeredQuestions };
+    }
+
+    // All answers are "No" -> Minimal risk
+    return { classification: "RISCO_MINIMO", score: 10, triggeredQuestions: [] };
   };
 
   const handleNext = () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Calculate risk and prepare detailed questions data for AI analysis
-      const riskScore = calculateRiskScore();
+      const result = calculateRiskClassification();
+      
       const questionsData = questions.map((q) => {
-        const answer = answers[q.id];
-        const option = q.options.find((o) => o.value === answer);
+        const answered = answers[q.id];
         return {
           id: q.id,
           question: q.question,
           category: q.category,
-          selectedOption: option?.label || "",
-          riskWeight: option?.riskWeight || 0,
+          riskType: q.riskType,
+          legalReference: q.legalReference,
+          answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
+          triggersClassification: result.triggeredQuestions.includes(q.id),
         };
       });
-      navigate("/results", { state: { answers, riskScore, questionsData } });
+
+      const riskScore = {
+        score: result.score,
+        maxScore: 100,
+        percentage: result.score,
+      };
+
+      navigate("/results", { 
+        state: { 
+          answers, 
+          riskScore, 
+          questionsData,
+          riskClassification: result.classification,
+          triggeredQuestions: result.triggeredQuestions,
+        } 
+      });
     }
   };
 
@@ -206,29 +245,8 @@ const Assessment = () => {
     }
   };
 
-  const calculateRiskScore = () => {
-    let totalWeight = 0;
-    let maxPossibleWeight = 0;
-
-    questions.forEach((q) => {
-      const answer = answers[q.id];
-      if (answer) {
-        const option = q.options.find((o) => o.value === answer);
-        if (option) {
-          totalWeight += option.riskWeight;
-        }
-      }
-      // Calculate max possible weight for this question
-      const maxOption = q.options.reduce((max, o) => (o.riskWeight > max ? o.riskWeight : max), 0);
-      maxPossibleWeight += maxOption;
-    });
-
-    return {
-      score: totalWeight,
-      maxScore: maxPossibleWeight,
-      percentage: Math.round((totalWeight / maxPossibleWeight) * 100),
-    };
-  };
+  const currentAnswer = answers[currentQuestion.id];
+  const hasAnswered = currentAnswer !== undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,7 +263,7 @@ const Assessment = () => {
                 </div>
                 <div>
                   <h1 className="font-display text-xl font-bold text-foreground">
-                    Diagnóstico de Risco
+                    Diagnóstico EU AI Act
                   </h1>
                   <p className="text-sm text-muted-foreground">
                     Questão {currentStep + 1} de {questions.length}
@@ -262,8 +280,21 @@ const Assessment = () => {
           {/* Question Card */}
           <div className="legal-card p-8 mb-6">
             {/* Category Badge */}
-            <div className="inline-flex items-center gap-2 bg-accent/10 rounded-full px-3 py-1 mb-6">
-              <span className="text-xs font-medium text-accent">{currentQuestion.category}</span>
+            <div className="flex items-center gap-2 mb-6">
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 ${
+                currentQuestion.riskType === "prohibited" 
+                  ? "bg-destructive/10 text-destructive" 
+                  : currentQuestion.riskType === "high"
+                  ? "bg-orange-500/10 text-orange-600"
+                  : currentQuestion.riskType === "limited"
+                  ? "bg-yellow-500/10 text-yellow-600"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                <span className="text-xs font-medium">{currentQuestion.category}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {currentQuestion.legalReference}
+              </span>
             </div>
 
             {/* Question */}
@@ -288,45 +319,59 @@ const Assessment = () => {
               </div>
             )}
 
-            {/* Options */}
+            {/* Yes/No Options */}
             <RadioGroup
-              value={answers[currentQuestion.id] || ""}
+              value={currentAnswer === true ? "yes" : currentAnswer === false ? "no" : ""}
               onValueChange={handleAnswer}
               className="space-y-3"
             >
-              {currentQuestion.options.map((option) => (
-                <div
-                  key={option.value}
-                  className={`relative flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
-                    answers[currentQuestion.id] === option.value
-                      ? "border-accent bg-accent/5"
-                      : "border-border hover:border-accent/50"
-                  }`}
-                >
-                  <RadioGroupItem
-                    value={option.value}
-                    id={option.value}
-                    className="sr-only"
-                  />
-                  <Label
-                    htmlFor={option.value}
-                    className="flex items-center gap-3 cursor-pointer w-full"
+              <div
+                className={`relative flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
+                  currentAnswer === true
+                    ? "border-accent bg-accent/5"
+                    : "border-border hover:border-accent/50"
+                }`}
+              >
+                <RadioGroupItem value="yes" id="yes" className="sr-only" />
+                <Label htmlFor="yes" className="flex items-center gap-3 cursor-pointer w-full">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      currentAnswer === true
+                        ? "border-accent bg-accent"
+                        : "border-muted-foreground"
+                    }`}
                   >
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                        answers[currentQuestion.id] === option.value
-                          ? "border-accent bg-accent"
-                          : "border-muted-foreground"
-                      }`}
-                    >
-                      {answers[currentQuestion.id] === option.value && (
-                        <CheckCircle2 className="w-3 h-3 text-accent-foreground" />
-                      )}
-                    </div>
-                    <span className="text-sm md:text-base text-foreground">{option.label}</span>
-                  </Label>
-                </div>
-              ))}
+                    {currentAnswer === true && (
+                      <CheckCircle2 className="w-3 h-3 text-accent-foreground" />
+                    )}
+                  </div>
+                  <span className="text-sm md:text-base text-foreground font-medium">Sim</span>
+                </Label>
+              </div>
+
+              <div
+                className={`relative flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
+                  currentAnswer === false
+                    ? "border-accent bg-accent/5"
+                    : "border-border hover:border-accent/50"
+                }`}
+              >
+                <RadioGroupItem value="no" id="no" className="sr-only" />
+                <Label htmlFor="no" className="flex items-center gap-3 cursor-pointer w-full">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      currentAnswer === false
+                        ? "border-accent bg-accent"
+                        : "border-muted-foreground"
+                    }`}
+                  >
+                    {currentAnswer === false && (
+                      <CheckCircle2 className="w-3 h-3 text-accent-foreground" />
+                    )}
+                  </div>
+                  <span className="text-sm md:text-base text-foreground font-medium">Não</span>
+                </Label>
+              </div>
             </RadioGroup>
           </div>
 
@@ -343,7 +388,7 @@ const Assessment = () => {
             <Button
               variant={currentStep === questions.length - 1 ? "gold" : "default"}
               onClick={handleNext}
-              disabled={!answers[currentQuestion.id]}
+              disabled={!hasAnswered}
             >
               {currentStep === questions.length - 1 ? "Ver Resultado" : "Próxima"}
               <ArrowRight className="w-4 h-4 ml-2" />
