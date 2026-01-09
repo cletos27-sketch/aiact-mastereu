@@ -4,6 +4,8 @@ import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import SettingsModal from "@/components/dashboard/SettingsModal";
+import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
 import {
   BookOpen,
   CheckCircle2,
@@ -11,6 +13,7 @@ import {
   Download,
   Eye,
   FileText,
+  History,
   Loader2,
   LogOut,
   Settings,
@@ -126,6 +129,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const [tasks, setTasks] = useState(checklist);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -179,7 +183,7 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
                 <Settings className="w-4 h-4 mr-2" />
                 Configurações
               </Button>
@@ -188,6 +192,24 @@ const Dashboard = () => {
                 Sair
               </Button>
             </div>
+          </div>
+
+          {/* Assessment History Section */}
+          <div className="legal-card p-6 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <History className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Histórico de Avaliações
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Suas avaliações de risco anteriores
+                </p>
+              </div>
+            </div>
+            <AssessmentHistory />
           </div>
 
           {/* Progress Card */}
@@ -338,6 +360,8 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
