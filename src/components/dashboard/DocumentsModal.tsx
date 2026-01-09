@@ -17,8 +17,10 @@ import {
   CheckCircle,
   Loader2,
   Calendar,
+  GraduationCap,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 
 interface RiskAssessment {
   id: string;
@@ -533,6 +535,47 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 })}
               </div>
             )}
+          </div>
+
+          {/* AI Literacy Guide - Featured Document */}
+          <div className="bg-gradient-to-r from-gold/10 to-accent/10 rounded-lg border border-gold/30 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gold to-gold/70 flex items-center justify-center shadow-md">
+                  <GraduationCap className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-foreground">
+                      Guia de Literacia em IA (Artigo 4)
+                    </p>
+                    <Badge className="bg-gold/20 text-gold text-xs">
+                      Compliance Pack
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Documento profissional de 8 páginas • EU AI Act 2026
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="gold"
+                size="sm"
+                onClick={() => {
+                  generateAILiteracyGuidePDF(latestAssessment ? {
+                    risk_classification: latestAssessment.risk_classification,
+                    risk_score: latestAssessment.risk_score,
+                    legal_justification: latestAssessment.legal_justification,
+                    relevant_articles: latestAssessment.relevant_articles,
+                    priority_actions: latestAssessment.priority_actions,
+                  } : undefined);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
           </div>
 
           {/* Document Templates Section */}
