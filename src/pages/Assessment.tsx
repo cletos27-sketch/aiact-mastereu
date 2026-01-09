@@ -183,9 +183,20 @@ const Assessment = () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Calculate risk and navigate to results
+      // Calculate risk and prepare detailed questions data for AI analysis
       const riskScore = calculateRiskScore();
-      navigate("/results", { state: { answers, riskScore } });
+      const questionsData = questions.map((q) => {
+        const answer = answers[q.id];
+        const option = q.options.find((o) => o.value === answer);
+        return {
+          id: q.id,
+          question: q.question,
+          category: q.category,
+          selectedOption: option?.label || "",
+          riskWeight: option?.riskWeight || 0,
+        };
+      });
+      navigate("/results", { state: { answers, riskScore, questionsData } });
     }
   };
 
