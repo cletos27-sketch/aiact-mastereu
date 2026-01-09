@@ -1,13 +1,17 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowRight,
   Ban,
   BookOpen,
+  Brain,
   CheckCircle2,
   ClipboardList,
   Download,
@@ -17,6 +21,7 @@ import {
   Lock,
   Shield,
   ShieldAlert,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -26,11 +31,65 @@ interface RiskScore {
   percentage: number;
 }
 
+interface QuestionData {
+  id: number;
+  question: string;
+  category: string;
+  selectedOption: string;
+  riskWeight: number;
+}
+
 const Results = () => {
   const location = useLocation();
-  const { riskScore } = (location.state as { riskScore: RiskScore }) || {};
+  const { riskScore, questionsData } = (location.state as { 
+    riskScore: RiskScore; 
+    questionsData: QuestionData[];
+  }) || {};
+  
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  if (!riskScore) {
+  useEffect(() => {
+    const analyzeWithAI = async () => {
+      if (!riskScore || !questionsData) return;
+      
+      setIsAnalyzing(true);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-risk`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              answers: location.state?.answers,
+              questions: questionsData,
+              riskScore,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to analyze");
+        }
+
+        const data = await response.json();
+        setAiAnalysis(data.analysis);
+      } catch (error) {
+        console.error("AI analysis error:", error);
+        toast.error("Erro ao gerar análise de IA. Usando classificação padrão.");
+      } finally {
+        setIsAnalyzing(false);
+      }
+    };
+
+    analyzeWithAI();
+  }, [riskScore, questionsData, location.state?.answers]);
+
+  if (!riskScore || !questionsData) {
     return <Navigate to="/assessment" replace />;
   }
 
@@ -188,6 +247,48 @@ const Results = () => {
                 {config.action}
               </p>
             </div>
+          </div>
+
+          {/* AI Analysis Section */}
+          <div className="legal-card p-6 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent to-gold flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Análise Jurídica por IA
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Baseada no EU AI Act 2024/1689
+                </p>
+              </div>
+              <Sparkles className="w-5 h-5 text-gold ml-auto" />
+            </div>
+
+            {isAnalyzing ? (
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-[90%]" />
+                <Skeleton className="h-4 w-[85%]" />
+                <Skeleton className="h-4 w-[80%]" />
+                <Skeleton className="h-4 w-[75%]" />
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-muted-foreground">Analisando respostas com IA...</span>
+                </div>
+              </div>
+            ) : aiAnalysis ? (
+              <div className="prose prose-sm max-w-none text-foreground">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {aiAnalysis}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Análise de IA não disponível. A classificação foi determinada com base na pontuação do questionário.
+              </div>
+            )}
           </div>
 
           {/* Grid Layout */}
