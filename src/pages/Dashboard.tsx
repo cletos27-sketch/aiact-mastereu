@@ -6,7 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
+import DocumentsModal from "@/components/dashboard/DocumentsModal";
 import { PopupModal } from "react-calendly";
+import { jsPDF } from "jspdf";
 import {
   BookOpen,
   Calendar,
@@ -133,6 +135,149 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState(checklist);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [calendlyOpen, setCalendlyOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+
+  const documentPDFContent: Record<number, { title: string; content: string[] }> = {
+    1: {
+      title: "Política de Transparência em IA",
+      content: [
+        "1. OBJETIVO",
+        "Esta política estabelece as diretrizes para garantir transparência no uso de sistemas de Inteligência Artificial.",
+        "",
+        "2. PRINCÍPIOS DE TRANSPARÊNCIA",
+        "• Informar claramente quando um sistema de IA está em uso",
+        "• Explicar as finalidades do sistema de IA",
+        "• Disponibilizar informações sobre a lógica de funcionamento",
+      ],
+    },
+    2: {
+      title: "Registro de Logs de Auditoria",
+      content: [
+        "1. REQUISITOS DE LOGGING",
+        "Os sistemas de IA devem manter logs automáticos durante todo o ciclo de vida.",
+        "",
+        "2. INFORMAÇÕES A REGISTRAR",
+        "• Data e hora de cada utilização",
+        "• Identificação do operador/usuário",
+        "• Dados de entrada e saída",
+      ],
+    },
+    3: {
+      title: "Documentação Técnica do Sistema de IA",
+      content: [
+        "1. DESCRIÇÃO GERAL DO SISTEMA",
+        "• Nome do sistema:",
+        "• Versão:",
+        "• Finalidade principal:",
+        "",
+        "2. ARQUITETURA TÉCNICA",
+        "• Modelo de IA utilizado:",
+        "• Framework/biblioteca:",
+      ],
+    },
+    4: {
+      title: "Material de Literacia em IA (Artigo 4)",
+      content: [
+        "1. INTRODUÇÃO À LITERACIA EM IA",
+        "O Artigo 4 do EU AI Act exige conhecimento suficiente sobre IA.",
+        "",
+        "2. CONCEITOS FUNDAMENTAIS",
+        "• O que é Inteligência Artificial",
+        "• Tipos de sistemas de IA",
+        "• Limitações dos sistemas de IA",
+      ],
+    },
+    5: {
+      title: "Avaliação de Impacto em Direitos Fundamentais",
+      content: [
+        "1. IDENTIFICAÇÃO DO SISTEMA",
+        "• Nome do sistema:",
+        "• Operador responsável:",
+        "",
+        "2. ANÁLISE DE DIREITOS IMPACTADOS",
+        "• Dignidade humana",
+        "• Liberdade e autonomia",
+        "• Não-discriminação",
+      ],
+    },
+    6: {
+      title: "Política de Supervisão Humana",
+      content: [
+        "1. OBJETIVO",
+        "Estabelecer diretrizes para supervisão humana adequada conforme Artigo 14.",
+        "",
+        "2. PRINCÍPIOS DE SUPERVISÃO",
+        "• Capacidade de compreender o funcionamento",
+        "• Capacidade de monitorar a operação",
+        "• Capacidade de intervir ou interromper",
+      ],
+    },
+  };
+
+  const generateQuickPDF = (docId: number, docName: string) => {
+    const template = documentPDFContent[docId];
+    if (!template) return;
+
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPosition = 20;
+
+    // Header
+    pdf.setFillColor(12, 25, 41);
+    pdf.rect(0, 0, pageWidth, 40, "F");
+    
+    pdf.setTextColor(212, 175, 55);
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(template.title, margin, 25);
+
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFontSize(10);
+    pdf.text(`EU AI Act Compliance • ${new Date().toLocaleDateString("pt-BR")}`, margin, 35);
+
+    yPosition = 55;
+
+    // Content
+    pdf.setTextColor(50, 50, 50);
+    
+    for (const line of template.content) {
+      if (line === "") {
+        yPosition += 5;
+        continue;
+      }
+
+      if (line.match(/^\d+\./)) {
+        pdf.setFontSize(12);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(12, 25, 41);
+        yPosition += 5;
+      } else if (line.startsWith("•")) {
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(80, 80, 80);
+      } else {
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(60, 60, 60);
+      }
+
+      const lines = pdf.splitTextToSize(line, pageWidth - 2 * margin);
+      for (const textLine of lines) {
+        pdf.text(textLine, margin, yPosition);
+        yPosition += 6;
+      }
+    }
+
+    // Footer
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(0, 280, pageWidth, 17, "F");
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFontSize(8);
+    pdf.text("EU AI Act Compliance Tool • Documento gerado automaticamente", margin, 288);
+
+    pdf.save(`${docName.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -278,6 +423,7 @@ const Dashboard = () => {
                         variant="ghost"
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => generateQuickPDF(doc.id, doc.name)}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
@@ -286,7 +432,11 @@ const Dashboard = () => {
                 })}
               </div>
 
-              <Button variant="outline" className="w-full mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full mt-4"
+                onClick={() => setDocumentsOpen(true)}
+              >
                 Ver Todos os Documentos
               </Button>
             </div>
@@ -376,6 +526,7 @@ const Dashboard = () => {
       </main>
 
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <DocumentsModal open={documentsOpen} onOpenChange={setDocumentsOpen} />
       
       <PopupModal
         url="https://calendly.com/cletoguarda/30min"
