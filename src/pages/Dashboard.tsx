@@ -6,10 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
-import { PopupModal } from "react-calendly";
 import {
   BookOpen,
-  Calendar,
   CheckCircle2,
   ClipboardList,
   Download,
@@ -132,7 +130,6 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [tasks, setTasks] = useState(checklist);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [calendlyOpen, setCalendlyOpen] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -347,55 +344,24 @@ const Dashboard = () => {
           </div>
 
           {/* Help Banner */}
-          <div className="legal-card p-8 mt-8 bg-gradient-to-r from-primary/5 to-accent/5 border-gold/20">
+          <div className="legal-card p-6 mt-8 bg-muted/30">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                  <ShieldAlert className="w-5 h-5 text-gold" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gold">
-                    Consultoria Especializada
-                  </span>
-                </div>
-                <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                  Precisa de uma implementação personalizada para sistemas de Alto Risco?
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                  Precisa de ajuda com a conformidade?
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Fale com um especialista. Nossa equipe de advogados e engenheiros está pronta 
-                  para auxiliar sua empresa em cada etapa do processo de adequação ao EU AI Act.
+                  Nossa equipe de especialistas está pronta para auxiliar sua empresa 
+                  em cada etapa do processo de adequação ao EU AI Act.
                 </p>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <Button 
-                  variant="gold" 
-                  size="lg"
-                  className="gap-2 shadow-gold"
-                  onClick={() => setCalendlyOpen(true)}
-                >
-                  <Calendar className="w-4 h-4" />
-                  Agendar Consultoria
-                </Button>
-                <span className="text-xs text-muted-foreground">30 min • Gratuito</span>
-              </div>
+              <Button variant="gold">Agendar Consultoria</Button>
             </div>
           </div>
         </div>
       </main>
 
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-      
-      <PopupModal
-        url="https://calendly.com/seu-link-aqui"
-        onModalClose={() => setCalendlyOpen(false)}
-        open={calendlyOpen}
-        rootElement={document.getElementById("root") as HTMLElement}
-        pageSettings={{
-          backgroundColor: "0a1628",
-          hideEventTypeDetails: false,
-          hideLandingPageDetails: false,
-          primaryColor: "c9a227",
-          textColor: "f8fafc",
-        }}
-      />
     </div>
   );
 };
