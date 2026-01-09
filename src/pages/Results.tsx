@@ -1,5 +1,5 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 import {
   AlertTriangle,
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   Eye,
   FileText,
   Gauge,
+  Loader2,
   Shield,
   ShieldAlert,
   ShieldOff,
@@ -53,7 +55,310 @@ const Results = () => {
   }) || {};
   
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const hasSaved = useRef(false);
+
+  const generateLegalJustification = useCallback((): string => {
+    const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
+    
+    if (riskClassification === "FORA_DE_ESCOPO") {
+      return "Conforme Artigo 2(5)(c) do Regulamento (UE) 2024/1689, sistemas de IA desenvolvidos ou utilizados exclusivamente para fins pessoais não profissionais estão fora do âmbito de aplicação do AI Act.";
+    }
+    
+    if (riskClassification === "PROIBIDO") {
+      const articles = triggeredQs.map(q => q.legalReference).join(", ");
+      return `O sistema enquadra-se nas práticas de IA proibidas definidas no Artigo 5 do AI Act. Referências específicas: ${articles}. A utilização deste sistema na sua forma atual é proibida na União Europeia.`;
+    }
+    
+    if (riskClassification === "ALTO_RISCO") {
+      const articles = triggeredQs.map(q => q.legalReference).join(", ");
+      return `O sistema é classificado como de alto risco conforme o Anexo III do Regulamento (UE) 2024/1689. Referências: ${articles}. São obrigatórias medidas de conformidade extensivas incluindo avaliação de conformidade, documentação técnica, e sistema de gestão de qualidade.`;
+    }
+    
+    if (riskClassification === "RISCO_LIMITADO") {
+      return "O sistema está sujeito a obrigações de transparência específicas conforme o Artigo 52 do AI Act. Os utilizadores devem ser informados de que estão interagindo com um sistema de IA.";
+    }
+    
+    return "O sistema apresenta risco mínimo e não está sujeito a obrigações específicas do AI Act, além das boas práticas recomendadas.";
+  }, [questionsData, riskClassification]);
+
+  const getRelevantArticles = useCallback((): string[] => {
+    const articles = new Set<string>();
+    
+    if (riskClassification === "PROIBIDO") {
+      articles.add("Artigo 5 - Práticas Proibidas");
+    }
+    if (riskClassification === "ALTO_RISCO") {
+      articles.add("Artigo 6 - Sistemas de Alto Risco");
+      articles.add("Anexo III - Lista de Áreas de Alto Risco");
+      articles.add("Artigo 9 - Gestão de Riscos");
+      articles.add("Artigo 10 - Dados e Governança de Dados");
+    }
+    if (riskClassification === "RISCO_LIMITADO") {
+      articles.add("Artigo 52 - Obrigações de Transparência");
+    }
+    
+    questionsData?.filter(q => q.triggersClassification).forEach(q => {
+      articles.add(q.legalReference);
+    });
+    
+    articles.add("Artigo 4 - Literacia em IA");
+    
+    return Array.from(articles);
+  }, [questionsData, riskClassification]);
+
+  const getPriorityActions = useCallback((): string[] => {
+    const actions: string[] = [];
+    
+    if (riskClassification === "PROIBIDO") {
+      actions.push("Suspender imediatamente a utilização do sistema");
+      actions.push("Consultar advogado especializado em AI Act");
+      actions.push("Avaliar alternativas que cumpram a regulamentação");
+      actions.push("Documentar a decisão e comunicar às partes interessadas");
+    } else if (riskClassification === "ALTO_RISCO") {
+      actions.push("Implementar sistema de gestão de qualidade");
+      actions.push("Preparar documentação técnica completa");
+      actions.push("Realizar avaliação de conformidade");
+      actions.push("Estabelecer processos de supervisão humana");
+      actions.push("Implementar sistema de logging e auditoria");
+    } else if (riskClassification === "RISCO_LIMITADO") {
+      actions.push("Implementar avisos de transparência claros");
+      actions.push("Informar utilizadores sobre natureza IA do sistema");
+      actions.push("Documentar medidas de transparência adoptadas");
+    } else if (riskClassification === "FORA_DE_ESCOPO") {
+      actions.push("Manter documentação sobre uso pessoal");
+      actions.push("Reavaliar se houver uso comercial futuro");
+    } else {
+      actions.push("Implementar boas práticas de IA responsável");
+      actions.push("Documentar funcionamento do sistema");
+      actions.push("Monitorizar actualizações regulatórias");
+    }
+    
+    actions.push("Implementar programa de literacia em IA (Artigo 4)");
+    
+    return actions;
+  }, [riskClassification]);
+
+  const generatePDF = useCallback(() => {
+    setIsGeneratingPDF(true);
+    
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPos = 20;
+
+      // Helper function to add text with word wrap
+      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10): number => {
+        doc.setFontSize(fontSize);
+        const lines = doc.splitTextToSize(text, maxWidth);
+        doc.text(lines, x, y);
+        return y + lines.length * (fontSize * 0.4);
+      };
+
+      // Helper to check and add new page if needed
+      const checkNewPage = (neededSpace: number) => {
+        if (yPos + neededSpace > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+      };
+
+      // Header
+      doc.setFillColor(15, 30, 60); // Navy blue
+      doc.rect(0, 0, pageWidth, 45, "F");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("EU AI-Compliance Master", margin, 20);
+      
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.text("Relatório de Diagnóstico de Conformidade", margin, 30);
+      
+      doc.setFontSize(9);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-PT", { 
+        day: "2-digit", 
+        month: "long", 
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      })}`, margin, 40);
+
+      yPos = 60;
+
+      // Risk Classification Box
+      const riskLabels: Record<RiskClassification, string> = {
+        PROIBIDO: "SISTEMA PROIBIDO",
+        ALTO_RISCO: "ALTO RISCO",
+        RISCO_LIMITADO: "RISCO LIMITADO",
+        RISCO_MINIMO: "RISCO MÍNIMO",
+        FORA_DE_ESCOPO: "FORA DO ÂMBITO"
+      };
+
+      const riskColors: Record<RiskClassification, [number, number, number]> = {
+        PROIBIDO: [220, 38, 38],
+        ALTO_RISCO: [234, 88, 12],
+        RISCO_LIMITADO: [202, 138, 4],
+        RISCO_MINIMO: [22, 163, 74],
+        FORA_DE_ESCOPO: [100, 116, 139]
+      };
+
+      const [r, g, b] = riskColors[riskClassification];
+      
+      doc.setFillColor(r, g, b);
+      doc.roundedRect(margin, yPos, contentWidth, 25, 3, 3, "F");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Classificação: ${riskLabels[riskClassification]}`, pageWidth / 2, yPos + 16, { align: "center" });
+
+      yPos += 40;
+
+      // Legal Justification Section
+      doc.setTextColor(15, 30, 60);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("1. Justificativa Legal", margin, yPos);
+      
+      yPos += 8;
+      doc.setDrawColor(200, 168, 87); // Gold
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, margin + 40, yPos);
+      
+      yPos += 10;
+      doc.setTextColor(60, 60, 60);
+      doc.setFont("helvetica", "normal");
+      yPos = addWrappedText(generateLegalJustification(), margin, yPos, contentWidth, 10);
+
+      yPos += 15;
+      checkNewPage(50);
+
+      // Triggered Questions
+      const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
+      if (triggeredQs.length > 0) {
+        doc.setTextColor(15, 30, 60);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("2. Questões Determinantes", margin, yPos);
+        
+        yPos += 8;
+        doc.setDrawColor(200, 168, 87);
+        doc.line(margin, yPos, margin + 50, yPos);
+        
+        yPos += 10;
+        
+        triggeredQs.forEach((q, idx) => {
+          checkNewPage(25);
+          doc.setFillColor(245, 245, 245);
+          doc.roundedRect(margin, yPos - 5, contentWidth, 20, 2, 2, "F");
+          
+          doc.setTextColor(60, 60, 60);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.text(`${idx + 1}.`, margin + 5, yPos + 3);
+          
+          doc.setFont("helvetica", "normal");
+          const questionLines = doc.splitTextToSize(q.question, contentWidth - 25);
+          doc.text(questionLines, margin + 15, yPos + 3);
+          
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(8);
+          doc.text(q.legalReference, margin + 15, yPos + 12);
+          
+          yPos += 22;
+        });
+      }
+
+      yPos += 10;
+      checkNewPage(60);
+
+      // Relevant Articles
+      doc.setTextColor(15, 30, 60);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("3. Artigos Relevantes do EU AI Act", margin, yPos);
+      
+      yPos += 8;
+      doc.setDrawColor(200, 168, 87);
+      doc.line(margin, yPos, margin + 60, yPos);
+      
+      yPos += 10;
+      
+      const articles = getRelevantArticles();
+      articles.forEach((article) => {
+        checkNewPage(10);
+        doc.setFillColor(200, 168, 87);
+        doc.circle(margin + 3, yPos - 2, 1.5, "F");
+        
+        doc.setTextColor(60, 60, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(article, margin + 10, yPos);
+        yPos += 8;
+      });
+
+      yPos += 15;
+      checkNewPage(60);
+
+      // Priority Actions
+      doc.setTextColor(15, 30, 60);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("4. Ações Prioritárias", margin, yPos);
+      
+      yPos += 8;
+      doc.setDrawColor(200, 168, 87);
+      doc.line(margin, yPos, margin + 40, yPos);
+      
+      yPos += 10;
+      
+      const actions = getPriorityActions();
+      actions.forEach((action, idx) => {
+        checkNewPage(12);
+        doc.setFillColor(22, 163, 74);
+        doc.roundedRect(margin, yPos - 4, 5, 5, 1, 1, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${idx + 1}`, margin + 1.5, yPos);
+        
+        doc.setTextColor(60, 60, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        yPos = addWrappedText(action, margin + 10, yPos, contentWidth - 10, 10);
+        yPos += 4;
+      });
+
+      // Footer on all pages
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFillColor(15, 30, 60);
+        doc.rect(0, 285, pageWidth, 12, "F");
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("EU AI-Compliance Master | Regulamento (UE) 2024/1689", margin, 291);
+        doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 291, { align: "right" });
+      }
+
+      // Save the PDF
+      const fileName = `EU-AI-Act-Diagnostico-${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast.success("PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erro ao gerar PDF. Tente novamente.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
   useEffect(() => {
     const saveAssessment = async () => {
@@ -93,87 +398,6 @@ const Results = () => {
 
     saveAssessment();
   }, [riskScore, questionsData, riskClassification, user]);
-
-  const generateLegalJustification = (): string => {
-    const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
-    
-    if (riskClassification === "FORA_DE_ESCOPO") {
-      return "Conforme Artigo 2(5)(c) do Regulamento (UE) 2024/1689, sistemas de IA desenvolvidos ou utilizados exclusivamente para fins pessoais não profissionais estão fora do âmbito de aplicação do AI Act.";
-    }
-    
-    if (riskClassification === "PROIBIDO") {
-      const articles = triggeredQs.map(q => q.legalReference).join(", ");
-      return `O sistema enquadra-se nas práticas de IA proibidas definidas no Artigo 5 do AI Act. Referências específicas: ${articles}. A utilização deste sistema na sua forma atual é proibida na União Europeia.`;
-    }
-    
-    if (riskClassification === "ALTO_RISCO") {
-      const articles = triggeredQs.map(q => q.legalReference).join(", ");
-      return `O sistema é classificado como de alto risco conforme o Anexo III do Regulamento (UE) 2024/1689. Referências: ${articles}. São obrigatórias medidas de conformidade extensivas incluindo avaliação de conformidade, documentação técnica, e sistema de gestão de qualidade.`;
-    }
-    
-    if (riskClassification === "RISCO_LIMITADO") {
-      return "O sistema está sujeito a obrigações de transparência específicas conforme o Artigo 52 do AI Act. Os utilizadores devem ser informados de que estão interagindo com um sistema de IA.";
-    }
-    
-    return "O sistema apresenta risco mínimo e não está sujeito a obrigações específicas do AI Act, além das boas práticas recomendadas.";
-  };
-
-  const getRelevantArticles = (): string[] => {
-    const articles = new Set<string>();
-    
-    if (riskClassification === "PROIBIDO") {
-      articles.add("Artigo 5 - Práticas Proibidas");
-    }
-    if (riskClassification === "ALTO_RISCO") {
-      articles.add("Artigo 6 - Sistemas de Alto Risco");
-      articles.add("Anexo III - Lista de Áreas de Alto Risco");
-      articles.add("Artigo 9 - Gestão de Riscos");
-      articles.add("Artigo 10 - Dados e Governança de Dados");
-    }
-    if (riskClassification === "RISCO_LIMITADO") {
-      articles.add("Artigo 52 - Obrigações de Transparência");
-    }
-    
-    questionsData?.filter(q => q.triggersClassification).forEach(q => {
-      articles.add(q.legalReference);
-    });
-    
-    articles.add("Artigo 4 - Literacia em IA");
-    
-    return Array.from(articles);
-  };
-
-  const getPriorityActions = (): string[] => {
-    const actions: string[] = [];
-    
-    if (riskClassification === "PROIBIDO") {
-      actions.push("Suspender imediatamente a utilização do sistema");
-      actions.push("Consultar advogado especializado em AI Act");
-      actions.push("Avaliar alternativas que cumpram a regulamentação");
-      actions.push("Documentar a decisão e comunicar às partes interessadas");
-    } else if (riskClassification === "ALTO_RISCO") {
-      actions.push("Implementar sistema de gestão de qualidade");
-      actions.push("Preparar documentação técnica completa");
-      actions.push("Realizar avaliação de conformidade");
-      actions.push("Estabelecer processos de supervisão humana");
-      actions.push("Implementar sistema de logging e auditoria");
-    } else if (riskClassification === "RISCO_LIMITADO") {
-      actions.push("Implementar avisos de transparência claros");
-      actions.push("Informar utilizadores sobre natureza IA do sistema");
-      actions.push("Documentar medidas de transparência adoptadas");
-    } else if (riskClassification === "FORA_DE_ESCOPO") {
-      actions.push("Manter documentação sobre uso pessoal");
-      actions.push("Reavaliar se houver uso comercial futuro");
-    } else {
-      actions.push("Implementar boas práticas de IA responsável");
-      actions.push("Documentar funcionamento do sistema");
-      actions.push("Monitorizar actualizações regulatórias");
-    }
-    
-    actions.push("Implementar programa de literacia em IA (Artigo 4)");
-    
-    return actions;
-  };
 
   if (!riskScore || !questionsData || !riskClassification) {
     return <Navigate to="/assessment" replace />;
@@ -520,9 +744,18 @@ const Results = () => {
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>
-                <Button variant="heroOutline" size="lg">
-                  <Download className="w-5 h-5" />
-                  Baixar Relatório PDF
+                <Button 
+                  variant="heroOutline" 
+                  size="lg"
+                  onClick={generatePDF}
+                  disabled={isGeneratingPDF}
+                >
+                  {isGeneratingPDF ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Download className="w-5 h-5" />
+                  )}
+                  {isGeneratingPDF ? "Gerando..." : "Baixar Relatório PDF"}
                 </Button>
               </div>
             </div>
