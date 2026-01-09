@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,12 +11,14 @@ import {
   Download,
   Eye,
   FileText,
+  Loader2,
   LogOut,
   Settings,
   Shield,
   ShieldAlert,
   Users,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const documents = [
   {
@@ -121,7 +123,16 @@ const checklist = [
 ];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
   const [tasks, setTasks] = useState(checklist);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const progressPercentage = (completedTasks / tasks.length) * 100;
@@ -133,6 +144,23 @@ const Dashboard = () => {
       )
     );
   };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,7 +175,7 @@ const Dashboard = () => {
                 Painel de Conformidade
               </h1>
               <p className="text-muted-foreground mt-1">
-                Bem-vindo! Acompanhe seu progresso rumo à conformidade total.
+                Bem-vindo, {user.email}! Acompanhe seu progresso rumo à conformidade total.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -155,7 +183,7 @@ const Dashboard = () => {
                 <Settings className="w-4 h-4 mr-2" />
                 Configurações
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
               </Button>
