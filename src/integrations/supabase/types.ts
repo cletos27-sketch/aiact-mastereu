@@ -77,6 +77,51 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_assessments: {
+        Row: {
+          ai_analysis: Json | null
+          created_at: string
+          id: string
+          legal_justification: string | null
+          priority_actions: string[] | null
+          relevant_articles: string[] | null
+          responses: Json
+          risk_classification: string
+          risk_score: number
+          updated_at: string
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          created_at?: string
+          id?: string
+          legal_justification?: string | null
+          priority_actions?: string[] | null
+          relevant_articles?: string[] | null
+          responses?: Json
+          risk_classification: string
+          risk_score?: number
+          updated_at?: string
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          created_at?: string
+          id?: string
+          legal_justification?: string | null
+          priority_actions?: string[] | null
+          relevant_articles?: string[] | null
+          responses?: Json
+          risk_classification?: string
+          risk_score?: number
+          updated_at?: string
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
