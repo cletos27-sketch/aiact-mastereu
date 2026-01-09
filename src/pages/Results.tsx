@@ -1,5 +1,7 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -39,19 +41,29 @@ interface QuestionData {
   riskWeight: number;
 }
 
+interface AIAnalysisResult {
+  riskClassification: string;
+  legalJustification: string;
+  relevantArticles: string[];
+  priorityActions: string[];
+  fullAnalysis: string;
+}
+
 const Results = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const { riskScore, questionsData } = (location.state as { 
     riskScore: RiskScore; 
     questionsData: QuestionData[];
   }) || {};
   
-  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const hasSaved = useRef(false);
 
   useEffect(() => {
-    const analyzeWithAI = async () => {
-      if (!riskScore || !questionsData) return;
+    const analyzeAndSave = async () => {
+      if (!riskScore || !questionsData || !user || hasSaved.current) return;
       
       setIsAnalyzing(true);
       try {
@@ -77,17 +89,67 @@ const Results = () => {
         }
 
         const data = await response.json();
-        setAiAnalysis(data.analysis);
+        setAiAnalysis(data);
+
+        // Save to database
+        const insertData = {
+          user_id: user.id,
+          user_email: user.email || "",
+          responses: questionsData as unknown as Record<string, unknown>,
+          risk_score: riskScore.score,
+          risk_classification: data.riskClassification || getRiskLevelFromScore(riskScore.percentage),
+          ai_analysis: data as unknown as Record<string, unknown>,
+          legal_justification: data.legalJustification,
+          relevant_articles: data.relevantArticles,
+          priority_actions: data.priorityActions,
+        };
+        
+        const { error: saveError } = await supabase
+          .from("risk_assessments")
+          .insert(insertData as any);
+
+        if (saveError) {
+          console.error("Error saving assessment:", saveError);
+          toast.error("Erro ao salvar avaliação no banco de dados.");
+        } else {
+          hasSaved.current = true;
+          toast.success("Avaliação salva com sucesso!");
+        }
       } catch (error) {
         console.error("AI analysis error:", error);
         toast.error("Erro ao gerar análise de IA. Usando classificação padrão.");
+        
+        // Save without AI analysis
+        if (user && !hasSaved.current) {
+          const fallbackData = {
+            user_id: user.id,
+            user_email: user.email || "",
+            responses: questionsData as unknown as Record<string, unknown>,
+            risk_score: riskScore.score,
+            risk_classification: getRiskLevelFromScore(riskScore.percentage),
+          };
+          
+          const { error: saveError } = await supabase
+            .from("risk_assessments")
+            .insert(fallbackData as any);
+          if (!saveError) {
+            hasSaved.current = true;
+          }
+        }
       } finally {
         setIsAnalyzing(false);
       }
     };
 
-    analyzeWithAI();
-  }, [riskScore, questionsData, location.state?.answers]);
+    analyzeAndSave();
+  }, [riskScore, questionsData, location.state?.answers, user]);
+
+  const getRiskLevelFromScore = (percentage: number): string => {
+    if (percentage >= 75) return "Proibido";
+    if (percentage >= 50) return "Alto";
+    if (percentage >= 25) return "Limitado";
+    return "Mínimo";
+  };
 
   if (!riskScore || !questionsData) {
     return <Navigate to="/assessment" replace />;
@@ -279,10 +341,56 @@ const Results = () => {
                 </div>
               </div>
             ) : aiAnalysis ? (
-              <div className="prose prose-sm max-w-none text-foreground">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {aiAnalysis}
+              <div className="space-y-4">
+                {/* Classification Badge */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-sm font-medium text-muted-foreground">Classificação IA:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    aiAnalysis.riskClassification === "PROIBIDO" ? "bg-risk-prohibited/20 text-risk-prohibited" :
+                    aiAnalysis.riskClassification === "ALTO" ? "bg-risk-high/20 text-risk-high" :
+                    aiAnalysis.riskClassification === "LIMITADO" ? "bg-risk-limited/20 text-risk-limited" :
+                    "bg-risk-minimal/20 text-risk-minimal"
+                  }`}>
+                    {aiAnalysis.riskClassification}
+                  </span>
                 </div>
+
+                {/* Legal Justification */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Justificativa Jurídica:</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {aiAnalysis.legalJustification}
+                  </p>
+                </div>
+
+                {/* Relevant Articles */}
+                {aiAnalysis.relevantArticles && aiAnalysis.relevantArticles.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Artigos Relevantes:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiAnalysis.relevantArticles.map((article, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-accent/10 text-accent text-xs rounded-md">
+                          {article}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Priority Actions */}
+                {aiAnalysis.priorityActions && aiAnalysis.priorityActions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Ações Prioritárias:</h4>
+                    <ul className="space-y-2">
+                      {aiAnalysis.priorityActions.map((action, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                          {action}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">

@@ -33,20 +33,15 @@ serve(async (req) => {
 
     const systemPrompt = `Você é um especialista jurídico em regulamentação de Inteligência Artificial, especialmente no EU AI Act (Regulamento UE 2024/1689). 
 
-Sua tarefa é analisar as respostas de um questionário de avaliação de risco de sistemas de IA e fornecer:
-1. A classificação de risco exata conforme o EU AI Act (Proibido, Alto Risco, Risco Limitado ou Risco Mínimo)
-2. Uma justificativa jurídica breve e precisa baseada nos artigos e anexos relevantes do EU AI Act
+Sua tarefa é analisar as respostas de um questionário de avaliação de risco de sistemas de IA e fornecer uma análise estruturada em formato JSON.
 
 Critérios do EU AI Act 2024/2026:
 - PROIBIDO (Artigo 5): Sistemas de identificação biométrica em tempo real em espaços públicos, pontuação social, manipulação subliminar, exploração de vulnerabilidades
-- ALTO RISCO (Anexo III): Biometria, infraestruturas críticas, educação, emprego, serviços essenciais, aplicação da lei, migração, justiça
-- RISCO LIMITADO (Artigo 50): Sistemas que interagem com pessoas, geram conteúdo sintético, ou fazem categorização de emoções - requerem obrigações de transparência
-- RISCO MÍNIMO: Todos os outros sistemas de IA - sem obrigações específicas além de boas práticas
+- ALTO (Anexo III): Biometria, infraestruturas críticas, educação, emprego, serviços essenciais, aplicação da lei, migração, justiça
+- LIMITADO (Artigo 50): Sistemas que interagem com pessoas, geram conteúdo sintético, ou fazem categorização de emoções - requerem obrigações de transparência
+- MÍNIMO: Todos os outros sistemas de IA - sem obrigações específicas além de boas práticas
 
-Prazos importantes:
-- Fevereiro 2025: Proibições entram em vigor
-- Agosto 2025: Obrigações de literacia em IA (Artigo 4)
-- Agosto 2026: Maioria das obrigações para sistemas de alto risco`;
+IMPORTANTE: Responda APENAS com um objeto JSON válido, sem markdown ou texto adicional.`;
 
     const userPrompt = `Analise as seguintes respostas do questionário de classificação de risco de IA:
 
@@ -55,13 +50,14 @@ PONTUAÇÃO DE RISCO CALCULADA: ${riskScore.score}/${riskScore.maxScore} (${risk
 RESPOSTAS DO QUESTIONÁRIO:
 ${answersDetails}
 
-Por favor, forneça:
-1. CLASSIFICAÇÃO: [Proibido/Alto Risco/Risco Limitado/Risco Mínimo]
-2. JUSTIFICATIVA JURÍDICA: Uma explicação de 2-3 parágrafos baseada nos artigos e anexos específicos do EU AI Act que fundamentam esta classificação.
-3. ARTIGOS RELEVANTES: Liste os artigos e anexos do EU AI Act aplicáveis.
-4. AÇÕES PRIORITÁRIAS: Liste 3-5 ações imediatas que a organização deve tomar.
-
-Responda em português de Portugal.`;
+Retorne APENAS um objeto JSON com esta estrutura exata:
+{
+  "riskClassification": "PROIBIDO" ou "ALTO" ou "LIMITADO" ou "MÍNIMO",
+  "legalJustification": "Justificativa jurídica de 2-3 parágrafos baseada nos artigos específicos do EU AI Act",
+  "relevantArticles": ["Artigo X", "Artigo Y", "Anexo Z"],
+  "priorityActions": ["Ação 1", "Ação 2", "Ação 3", "Ação 4", "Ação 5"],
+  "fullAnalysis": "Análise completa em texto corrido para exibição ao usuário"
+}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -70,11 +66,12 @@ Responda em português de Portugal.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        temperature: 0.3,
       }),
     });
 
@@ -100,9 +97,37 @@ Responda em português de Portugal.`;
     }
 
     const data = await response.json();
-    const analysis = data.choices?.[0]?.message?.content || "Análise não disponível.";
+    const content = data.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ analysis }), {
+    // Parse JSON from response
+    let analysisResult;
+    try {
+      // Try to extract JSON from the response (handle markdown code blocks)
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      analysisResult = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError, "Content:", content);
+      // Fallback structure based on score
+      const classification = riskScore.percentage >= 75 ? "PROIBIDO" : 
+                            riskScore.percentage >= 50 ? "ALTO" : 
+                            riskScore.percentage >= 25 ? "LIMITADO" : "MÍNIMO";
+      analysisResult = {
+        riskClassification: classification,
+        legalJustification: `Com base na pontuação de ${riskScore.percentage}%, o sistema foi classificado como ${classification}. Recomenda-se uma análise jurídica detalhada para confirmar esta classificação.`,
+        relevantArticles: ["Artigo 5", "Artigo 6", "Anexo III"],
+        priorityActions: [
+          "Realizar avaliação de conformidade detalhada",
+          "Documentar sistema de gestão de riscos",
+          "Implementar supervisão humana adequada",
+          "Preparar documentação técnica",
+          "Estabelecer plano de literacia em IA"
+        ],
+        fullAnalysis: content || "Análise detalhada não disponível. Por favor, consulte um especialista jurídico."
+      };
+    }
+
+    return new Response(JSON.stringify(analysisResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
