@@ -6,8 +6,10 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
+import { PopupModal } from "react-calendly";
 import {
   BookOpen,
+  Calendar,
   CheckCircle2,
   ClipboardList,
   Download,
@@ -130,6 +132,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [tasks, setTasks] = useState(checklist);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [calendlyOpen, setCalendlyOpen] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -344,24 +347,49 @@ const Dashboard = () => {
           </div>
 
           {/* Help Banner */}
-          <div className="legal-card p-6 mt-8 bg-muted/30">
+          <div className="legal-card p-6 mt-8 bg-gradient-to-r from-primary/5 to-accent/10 border-accent/20">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex-1 text-center md:text-left">
                 <h3 className="font-display text-lg font-semibold text-foreground mb-2">
                   Precisa de ajuda com a conformidade?
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-3">
                   Nossa equipe de especialistas está pronta para auxiliar sua empresa 
                   em cada etapa do processo de adequação ao EU AI Act.
                 </p>
+                <p className="text-xs text-accent font-medium flex items-center gap-1.5 justify-center md:justify-start">
+                  <Shield className="h-3.5 w-3.5" />
+                  Precisa de uma implementação personalizada para sistemas de Alto Risco? Fale com um especialista.
+                </p>
               </div>
-              <Button variant="gold">Agendar Consultoria</Button>
+              <Button 
+                variant="gold" 
+                onClick={() => setCalendlyOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Agendar Consultoria
+              </Button>
             </div>
           </div>
         </div>
       </main>
 
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      
+      <PopupModal
+        url="https://calendly.com/cletoguarda/30min"
+        onModalClose={() => setCalendlyOpen(false)}
+        open={calendlyOpen}
+        rootElement={document.getElementById("root") as HTMLElement}
+        pageSettings={{
+          backgroundColor: "0c1929",
+          hideEventTypeDetails: false,
+          hideLandingPageDetails: false,
+          primaryColor: "d4af37",
+          textColor: "f8fafc",
+        }}
+      />
     </div>
   );
 };
