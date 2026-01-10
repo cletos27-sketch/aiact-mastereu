@@ -48,14 +48,29 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ["line_items.data.price"],
+    });
     logStep("Session retrieved", { 
       status: session.payment_status, 
       customerId: session.customer,
       mode: session.mode 
     });
 
-    if (session.payment_status === "paid") {
+    const isPaid = session.payment_status === "paid" || 
+                   (session.mode === "subscription" && session.status === "complete");
+
+    if (isPaid) {
+      // Extract product and price info from the session
+      const lineItem = session.line_items?.data[0];
+      const price = lineItem?.price;
+      const priceId = price?.id || session.metadata?.price_id || "unknown";
+      const productId = typeof price?.product === "string" ? price.product : "prod_TlNdrEbFfZcfIg";
+      const amount = session.amount_total || 0;
+      const currency = session.currency || "eur";
+
+      logStep("Extracting purchase details", { priceId, productId, amount, currency, mode: session.mode });
+
       // Record the purchase in the database using admin client to bypass RLS
       const { error: insertError } = await supabaseAdmin
         .from("user_purchases")
@@ -64,10 +79,10 @@ serve(async (req) => {
           user_email: user.email,
           stripe_session_id: session_id,
           stripe_customer_id: session.customer as string,
-          product_id: "prod_TlNdrEbFfZcfIg",
-          price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp",
-          amount: 49900,
-          currency: "eur",
+          product_id: productId,
+          price_id: priceId,
+          amount: amount,
+          currency: currency,
           status: "paid",
           purchased_at: new Date().toISOString(),
         }, {
@@ -77,13 +92,14 @@ serve(async (req) => {
       if (insertError) {
         logStep("Error recording purchase", { error: insertError });
       } else {
-        logStep("Purchase recorded successfully");
+        logStep("Purchase recorded successfully", { mode: session.mode });
       }
 
       return new Response(JSON.stringify({ 
         success: true, 
         paid: true,
-        message: "Payment verified and recorded"
+        message: "Payment verified and recorded",
+        mode: session.mode,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

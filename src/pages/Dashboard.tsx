@@ -12,13 +12,13 @@ import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
+import PricingCards from "@/components/PricingCards";
 import { toast } from "sonner";
 import {
   BookOpen,
   Calendar,
   CheckCircle2,
   ClipboardList,
-  CreditCard,
   Download,
   Eye,
   FileText,
@@ -28,7 +28,6 @@ import {
   Lock,
   LogOut,
   Settings,
-  Shield,
   ShieldAlert,
   Users,
 } from "lucide-react";
@@ -146,24 +145,7 @@ const Dashboard = () => {
   const [calendlyOpen, setCalendlyOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [generatingLiteracyGuide, setGeneratingLiteracyGuide] = useState(false);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
-
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout");
-      if (error) throw error;
-      if (data?.url) {
-        window.open(data.url, "_blank");
-      }
-    } catch (error) {
-      console.error("Checkout error:", error);
-      toast.error("Erro ao iniciar checkout. Tente novamente.");
-    } finally {
-      setIsCheckingOut(false);
-    }
-  };
 
   const handleDownloadLiteracyGuide = async () => {
     if (!hasCompliancePack) {
@@ -460,41 +442,8 @@ const Dashboard = () => {
           </div>
 
           {/* Compliance Pack Status / Purchase CTA */}
-          {!purchaseLoading && !hasCompliancePack && (
-            <div className="legal-card p-6 mb-8 bg-gradient-to-r from-gold/10 to-accent/10 border-gold/30">
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-gold/20 flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-8 h-8 text-gold" />
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <h2 className="font-display text-xl font-semibold text-foreground mb-1">
-                    Dossiê de Conformidade EU AI Act
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Desbloqueie todos os templates e documentos necessários para sua conformidade completa.
-                    Inclui documentação técnica, políticas de transparência, guia de literacia e mais.
-                  </p>
-                  <div className="flex items-center gap-3 justify-center md:justify-start">
-                    <span className="text-2xl font-bold text-gold">499€</span>
-                    <span className="text-sm text-muted-foreground">pagamento único</span>
-                  </div>
-                </div>
-                <Button 
-                  variant="gold" 
-                  size="lg"
-                  onClick={handleCheckout}
-                  disabled={isCheckingOut}
-                  className="flex items-center gap-2 min-w-[200px]"
-                >
-                  {isCheckingOut ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                  {isCheckingOut ? "Processando..." : "Obter Dossiê Completo"}
-                </Button>
-              </div>
-            </div>
+          {!purchaseLoading && (
+            <PricingCards hasCompliancePack={hasCompliancePack} />
           )}
 
           {/* AI Literacy Guide Section - Compliance Pack Feature (show only if purchased) */}
@@ -522,7 +471,7 @@ const Dashboard = () => {
                       <BookOpen className="h-3 w-3" /> Formação Completa
                     </span>
                     <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
-                      <Shield className="h-3 w-3" /> Conformidade Art. 4
+                      <CheckCircle2 className="h-3 w-3" /> Conformidade Art. 4
                     </span>
                     <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
                       <FileText className="h-3 w-3" /> Personalizado
@@ -551,7 +500,7 @@ const Dashboard = () => {
           <div className="legal-card p-6 mb-8">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
               <div className="w-20 h-20 rounded-2xl bg-trust-gradient flex items-center justify-center flex-shrink-0">
-                <Shield className="w-10 h-10 text-accent-foreground" />
+                <CheckCircle2 className="w-10 h-10 text-accent-foreground" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
@@ -700,7 +649,7 @@ const Dashboard = () => {
                   em cada etapa do processo de adequação ao EU AI Act.
                 </p>
                 <p className="text-xs text-accent font-medium flex items-center gap-1.5 justify-center md:justify-start">
-                  <Shield className="h-3.5 w-3.5" />
+                  <ShieldAlert className="h-3.5 w-3.5" />
                   Precisa de uma implementação personalizada para sistemas de Alto Risco? Fale com um especialista.
                 </p>
               </div>

@@ -11,6 +11,9 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CHECK-PURCHASE] ${step}${detailsStr}`);
 };
 
+// Both prices unlock the Compliance Pack
+const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,13 +36,14 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check if user has a paid purchase for the Compliance Pack
+    // Check if user has any paid purchase for the Compliance Pack product
     const { data: purchases, error } = await supabaseClient
       .from("user_purchases")
       .select("*")
       .eq("user_id", user.id)
-      .eq("product_id", "prod_TlNdrEbFfZcfIg")
+      .eq("product_id", VALID_PRODUCT_ID)
       .eq("status", "paid")
+      .order("created_at", { ascending: false })
       .limit(1);
 
     if (error) {
@@ -48,11 +52,17 @@ serve(async (req) => {
     }
 
     const hasCompliancePack = purchases && purchases.length > 0;
-    logStep("Purchase check complete", { hasCompliancePack, purchaseCount: purchases?.length });
+    const purchase = hasCompliancePack ? purchases[0] : null;
+    
+    logStep("Purchase check complete", { 
+      hasCompliancePack, 
+      purchaseCount: purchases?.length,
+      priceId: purchase?.price_id 
+    });
 
     return new Response(JSON.stringify({ 
       hasCompliancePack,
-      purchase: hasCompliancePack ? purchases[0] : null
+      purchase: purchase
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
