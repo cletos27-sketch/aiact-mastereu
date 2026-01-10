@@ -4,6 +4,7 @@ import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
 import DocumentsModal from "@/components/dashboard/DocumentsModal";
@@ -605,7 +606,16 @@ const Dashboard = () => {
                         {task.loading ? (
                           <Loader2 className="h-4 w-4 animate-spin text-accent" />
                         ) : isLocked ? (
-                          <Lock className="h-4 w-4 text-muted-foreground" />
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Lock className="h-4 w-4 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Adquira o Dossiê de Conformidade para desbloquear esta tarefa</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
                           <Checkbox
                             checked={task.completed}
