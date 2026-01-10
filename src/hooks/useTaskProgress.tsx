@@ -3,46 +3,55 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
 // Define the checklist items with unique keys
+// Premium tasks require the Compliance Pack (499€) to be unlocked
 export const CHECKLIST_ITEMS = [
   {
     key: "diagnostico_risco",
     task: "Realizar diagnóstico de classificação de risco",
     category: "Identificação",
+    premium: false,
   },
   {
     key: "politica_transparencia",
     task: "Criar Política de Transparência",
     category: "Documentação",
+    premium: true,
   },
   {
     key: "logs_auditoria",
     task: "Implementar sistema de logs de auditoria",
     category: "Técnico",
+    premium: true,
   },
   {
     key: "treinar_literacia",
     task: "Treinar equipe em Literacia de IA (Artigo 4)",
     category: "Treinamento",
+    premium: true,
   },
   {
     key: "documentar_arquitetura",
     task: "Documentar arquitetura técnica do sistema",
     category: "Documentação",
+    premium: true,
   },
   {
     key: "avaliacao_impacto",
     task: "Realizar avaliação de impacto",
     category: "Análise",
+    premium: true,
   },
   {
     key: "supervisao_humana",
     task: "Definir processos de supervisão humana",
     category: "Governança",
+    premium: true,
   },
   {
     key: "testar_vieses",
     task: "Testar sistema para vieses e discriminação",
     category: "Técnico",
+    premium: false,
   },
 ];
 
@@ -52,6 +61,7 @@ export interface TaskState {
   category: string;
   completed: boolean;
   loading: boolean;
+  premium: boolean;
 }
 
 export const useTaskProgress = () => {
@@ -61,6 +71,7 @@ export const useTaskProgress = () => {
       ...item,
       completed: false,
       loading: false,
+      premium: item.premium,
     }))
   );
   const [initialLoading, setInitialLoading] = useState(true);

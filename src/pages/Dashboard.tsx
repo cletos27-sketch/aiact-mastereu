@@ -586,45 +586,63 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {tasks.map((task) => (
-                  <div
-                    key={task.key}
-                    className={`flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer ${
-                      task.completed
-                        ? "border-accent/30 bg-accent/5"
-                        : "border-border hover:border-accent/50"
-                    } ${task.loading ? "opacity-70" : ""}`}
-                    onClick={() => !task.loading && toggleTask(task.key)}
-                  >
-                    <div className="relative mt-0.5">
-                      {task.loading ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                      ) : (
-                        <Checkbox
-                          checked={task.completed}
-                          onCheckedChange={() => toggleTask(task.key)}
-                        />
+                {tasks.map((task) => {
+                  const isLocked = task.premium && !hasCompliancePack;
+                  
+                  return (
+                    <div
+                      key={task.key}
+                      className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
+                        isLocked 
+                          ? "border-border bg-muted/20 cursor-not-allowed opacity-60"
+                          : task.completed
+                            ? "border-accent/30 bg-accent/5 cursor-pointer"
+                            : "border-border hover:border-accent/50 cursor-pointer"
+                      } ${task.loading ? "opacity-70" : ""}`}
+                      onClick={() => !task.loading && !isLocked && toggleTask(task.key)}
+                    >
+                      <div className="relative mt-0.5">
+                        {task.loading ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                        ) : isLocked ? (
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Checkbox
+                            checked={task.completed}
+                            onCheckedChange={() => toggleTask(task.key)}
+                            disabled={isLocked}
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p
+                          className={`text-sm font-medium ${
+                            isLocked
+                              ? "text-muted-foreground"
+                              : task.completed
+                                ? "text-muted-foreground line-through"
+                                : "text-foreground"
+                          }`}
+                        >
+                          {task.task}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {task.category}
+                          </span>
+                          {isLocked && (
+                            <span className="text-xs px-1.5 py-0.5 bg-gold/10 text-gold rounded">
+                              Premium
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {task.completed && !task.loading && !isLocked && (
+                        <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <p
-                        className={`text-sm font-medium ${
-                          task.completed
-                            ? "text-muted-foreground line-through"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {task.task}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {task.category}
-                      </span>
-                    </div>
-                    {task.completed && !task.loading && (
-                      <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
