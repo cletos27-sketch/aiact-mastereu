@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
 import {
   Download,
   FileText,
@@ -18,9 +19,11 @@ import {
   Loader2,
   Calendar,
   GraduationCap,
+  Lock,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
+import { toast } from "sonner";
 
 interface RiskAssessment {
   id: string;
@@ -242,9 +245,24 @@ const documentTemplates: Record<DocumentType, { title: string; sections: string[
 
 const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
   const { user } = useAuth();
+  const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [assessments, setAssessments] = useState<RiskAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
+
+  const handlePremiumDownload = (downloadFn: () => void) => {
+    if (!hasCompliancePack) {
+      toast.error("Conteúdo Premium", {
+        description: "Este documento está disponível apenas para clientes do Compliance Pack.",
+        action: {
+          label: "Ver Planos",
+          onClick: () => window.location.href = "/#pricing",
+        },
+      });
+      return;
+    }
+    downloadFn();
+  };
 
   useEffect(() => {
     if (open && user) {
@@ -538,19 +556,35 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
           </div>
 
           {/* AI Literacy Guide - Featured Document */}
-          <div className="bg-gradient-to-r from-gold/10 to-accent/10 rounded-lg border border-gold/30 p-4">
+          <div className={`bg-gradient-to-r rounded-lg border p-4 ${
+            hasCompliancePack 
+              ? "from-gold/10 to-accent/10 border-gold/30" 
+              : "from-muted/50 to-muted/30 border-border"
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gold to-gold/70 flex items-center justify-center shadow-md">
-                  <GraduationCap className="h-6 w-6 text-primary" />
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-md ${
+                  hasCompliancePack 
+                    ? "bg-gradient-to-br from-gold to-gold/70" 
+                    : "bg-muted"
+                }`}>
+                  {hasCompliancePack ? (
+                    <GraduationCap className="h-6 w-6 text-primary" />
+                  ) : (
+                    <Lock className="h-6 w-6 text-muted-foreground" />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-foreground">
                       Guia de Literacia em IA (Artigo 4)
                     </p>
-                    <Badge className="bg-gold/20 text-gold text-xs">
-                      Compliance Pack
+                    <Badge className={`text-xs ${
+                      hasCompliancePack 
+                        ? "bg-gold/20 text-gold" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {hasCompliancePack ? "Compliance Pack" : "🔒 Premium"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -559,9 +593,9 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 </div>
               </div>
               <Button
-                variant="gold"
+                variant={hasCompliancePack ? "gold" : "outline"}
                 size="sm"
-                onClick={() => {
+                onClick={() => handlePremiumDownload(() => {
                   generateAILiteracyGuidePDF(latestAssessment ? {
                     risk_classification: latestAssessment.risk_classification,
                     risk_score: latestAssessment.risk_score,
@@ -569,11 +603,23 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                     relevant_articles: latestAssessment.relevant_articles,
                     priority_actions: latestAssessment.priority_actions,
                   } : undefined);
-                }}
+                })}
                 className="flex items-center gap-2"
+                disabled={purchaseLoading}
               >
-                <Download className="h-4 w-4" />
-                Download
+                {purchaseLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : hasCompliancePack ? (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Premium
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -598,32 +644,57 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 return (
                   <div
                     key={docType}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-accent/50 hover:bg-muted/30 transition-all group"
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-all group ${
+                      hasCompliancePack 
+                        ? "border-border hover:border-accent/50 hover:bg-muted/30" 
+                        : "border-border/50 bg-muted/20"
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-accent" />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        hasCompliancePack ? "bg-accent/10" : "bg-muted"
+                      }`}>
+                        {hasCompliancePack ? (
+                          <FileText className="h-5 w-5 text-accent" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-foreground">
-                          {template.title}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-medium text-sm ${
+                            hasCompliancePack ? "text-foreground" : "text-muted-foreground"
+                          }`}>
+                            {template.title}
+                          </p>
+                          {!hasCompliancePack && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              🔒
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          PDF • Gerado dinamicamente
+                          PDF • {hasCompliancePack ? "Gerado dinamicamente" : "Conteúdo Premium"}
                         </p>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => generateDocumentPDF(docType, latestAssessment)}
-                      disabled={isGenerating}
-                      className="opacity-70 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handlePremiumDownload(() => generateDocumentPDF(docType, latestAssessment))}
+                      disabled={isGenerating || purchaseLoading}
+                      className={`transition-opacity ${
+                        hasCompliancePack 
+                          ? "opacity-70 group-hover:opacity-100" 
+                          : "opacity-50"
+                      }`}
                     >
-                      {isGenerating ? (
+                      {isGenerating || purchaseLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
+                      ) : hasCompliancePack ? (
                         <Download className="h-4 w-4" />
+                      ) : (
+                        <Lock className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
