@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,6 +12,7 @@ import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
+import { useTaskProgress } from "@/hooks/useTaskProgress";
 import PricingCards from "@/components/PricingCards";
 import { toast } from "sonner";
 import {
@@ -85,63 +86,19 @@ const documents = [
   },
 ];
 
-const checklist = [
-  {
-    id: 1,
-    task: "Realizar diagnóstico de classificação de risco",
-    category: "Identificação",
-    completed: true,
-  },
-  {
-    id: 2,
-    task: "Criar Política de Transparência",
-    category: "Documentação",
-    completed: false,
-  },
-  {
-    id: 3,
-    task: "Implementar sistema de logs de auditoria",
-    category: "Técnico",
-    completed: false,
-  },
-  {
-    id: 4,
-    task: "Treinar equipe em Literacia de IA (Artigo 4)",
-    category: "Treinamento",
-    completed: false,
-  },
-  {
-    id: 5,
-    task: "Documentar arquitetura técnica do sistema",
-    category: "Documentação",
-    completed: false,
-  },
-  {
-    id: 6,
-    task: "Realizar avaliação de impacto",
-    category: "Análise",
-    completed: false,
-  },
-  {
-    id: 7,
-    task: "Definir processos de supervisão humana",
-    category: "Governança",
-    completed: false,
-  },
-  {
-    id: 8,
-    task: "Testar sistema para vieses e discriminação",
-    category: "Técnico",
-    completed: false,
-  },
-];
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
   const { hasCompliancePack, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
-  const [tasks, setTasks] = useState(checklist);
+  const { 
+    tasks, 
+    initialLoading: tasksLoading, 
+    toggleTask, 
+    completedCount: completedTasks, 
+    totalCount: totalTasks, 
+    progressPercentage 
+  } = useTaskProgress();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [calendlyOpen, setCalendlyOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
@@ -393,23 +350,12 @@ const Dashboard = () => {
     verifyPaymentFromUrl();
   }, [searchParams, user, refreshPurchase, setSearchParams, isVerifyingPayment]);
 
-  const completedTasks = tasks.filter((t) => t.completed).length;
-  const progressPercentage = (completedTasks / tasks.length) * 100;
-
-  const toggleTask = (taskId: number) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  if (loading) {
+  if (loading || tasksLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-accent" />
@@ -554,7 +500,7 @@ const Dashboard = () => {
                 </div>
                 <Progress value={progressPercentage} className="h-3 mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  {completedTasks} de {tasks.length} tarefas concluídas • Prazo: Agosto 2026
+                  {completedTasks} de {totalTasks} tarefas concluídas • Prazo: Agosto 2026
                 </p>
               </div>
             </div>
@@ -635,26 +581,31 @@ const Dashboard = () => {
                   </h2>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {completedTasks}/{tasks.length}
+                  {completedTasks}/{totalTasks}
                 </span>
               </div>
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                 {tasks.map((task) => (
                   <div
-                    key={task.id}
+                    key={task.key}
                     className={`flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer ${
                       task.completed
                         ? "border-accent/30 bg-accent/5"
                         : "border-border hover:border-accent/50"
-                    }`}
-                    onClick={() => toggleTask(task.id)}
+                    } ${task.loading ? "opacity-70" : ""}`}
+                    onClick={() => !task.loading && toggleTask(task.key)}
                   >
-                    <Checkbox
-                      checked={task.completed}
-                      className="mt-0.5"
-                      onCheckedChange={() => toggleTask(task.id)}
-                    />
+                    <div className="relative mt-0.5">
+                      {task.loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                      ) : (
+                        <Checkbox
+                          checked={task.completed}
+                          onCheckedChange={() => toggleTask(task.key)}
+                        />
+                      )}
+                    </div>
                     <div className="flex-1">
                       <p
                         className={`text-sm font-medium ${
@@ -669,7 +620,7 @@ const Dashboard = () => {
                         {task.category}
                       </span>
                     </div>
-                    {task.completed && (
+                    {task.completed && !task.loading && (
                       <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
                     )}
                   </div>
