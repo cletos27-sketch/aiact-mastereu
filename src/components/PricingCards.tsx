@@ -8,12 +8,13 @@ interface PricingCardsProps {
   hasCompliancePack: boolean;
 }
 
+// PRODUCTION Price IDs
 const PRICING_OPTIONS = [
   {
     id: "one-time",
     name: "Pacote Único",
     price: "499€",
-    priceId: "price_1Snqs8IV86RXPoUIDO9x8pWp",
+    priceId: "price_1So0IyIV86RXPoUIiR2PXhM5",
     description: "pagamento único",
     features: [
       "Todos os templates de conformidade",
@@ -29,7 +30,7 @@ const PRICING_OPTIONS = [
     id: "subscription",
     name: "Monitoramento Mensal",
     price: "99€",
-    priceId: "price_1Snqs8IV86RXPoUIUHrXN5fI",
+    priceId: "price_1So0IyIV86RXPoUIweuHHwNB",
     description: "/mês",
     features: [
       "Tudo do Pacote Único",
