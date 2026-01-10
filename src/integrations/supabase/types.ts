@@ -54,6 +54,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_paid: boolean
           updated_at: string
           user_id: string
         }
@@ -63,6 +64,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_paid?: boolean
           updated_at?: string
           user_id: string
         }
@@ -72,6 +74,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_paid?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -166,6 +169,33 @@ export type Database = {
           stripe_session_id?: string | null
           updated_at?: string
           user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_tasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          task_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_key?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
