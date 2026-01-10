@@ -59,8 +59,8 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/results`,
+      success_url: `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/dashboard`,
       metadata: {
         user_id: user.id,
         user_email: user.email,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, XCircle, ArrowRight, Download } from "lucide-react";
@@ -10,6 +11,7 @@ const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { refresh: refreshPurchase } = usePurchaseStatus();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
 
@@ -39,6 +41,8 @@ const PaymentSuccess = () => {
         if (data.paid) {
           setStatus("success");
           setMessage("Seu pagamento foi processado com sucesso! O Dossiê de Conformidade está agora disponível no seu Dashboard.");
+          // Refresh purchase status so dashboard shows updated state
+          await refreshPurchase();
         } else {
           setStatus("error");
           setMessage("O pagamento ainda não foi confirmado. Por favor, aguarde alguns momentos ou entre em contato conosco.");
@@ -51,7 +55,7 @@ const PaymentSuccess = () => {
     };
 
     verifyPayment();
-  }, [searchParams, user, authLoading, navigate]);
+  }, [searchParams, user, authLoading, navigate, refreshPurchase]);
 
   if (authLoading || status === "loading") {
     return (
