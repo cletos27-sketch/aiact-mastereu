@@ -15,6 +15,7 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   Download,
   Eye,
   FileText,
@@ -56,6 +57,7 @@ const Results = () => {
   
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const hasSaved = useRef(false);
 
   const generateLegalJustification = useCallback((): string => {
@@ -724,23 +726,79 @@ const Results = () => {
             </div>
           </div>
 
-          {/* CTA Section */}
+          {/* CTA Section - Show Compliance Pack button for ALTO_RISCO and RISCO_LIMITADO */}
+          {(riskClassification === "ALTO_RISCO" || riskClassification === "RISCO_LIMITADO") && user && (
+            <div className="legal-card p-8 mb-8 bg-gradient-to-r from-gold/10 to-accent/10 border-gold/30">
+              <div className="max-w-xl mx-auto text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-6">
+                  <Shield className="w-8 h-8 text-gold" />
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground mb-2">
+                  Dossiê de Conformidade EU AI Act
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Obtenha todos os documentos e templates necessários para estar em conformidade 
+                  com o EU AI Act. Inclui documentação técnica, política de transparência, 
+                  guia de literacia em IA e muito mais.
+                </p>
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <span className="text-3xl font-bold text-gold">499€</span>
+                  <span className="text-sm text-muted-foreground">pagamento único</span>
+                </div>
+                <Button 
+                  variant="gold" 
+                  size="lg"
+                  onClick={async () => {
+                    setIsCheckingOut(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("create-checkout");
+                      if (error) throw error;
+                      if (data?.url) {
+                        window.open(data.url, "_blank");
+                      }
+                    } catch (error) {
+                      console.error("Checkout error:", error);
+                      toast.error("Erro ao iniciar checkout. Tente novamente.");
+                    } finally {
+                      setIsCheckingOut(false);
+                    }
+                  }}
+                  disabled={isCheckingOut}
+                  className="min-w-[250px]"
+                >
+                  {isCheckingOut ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-5 h-5" />
+                  )}
+                  {isCheckingOut ? "Processando..." : "Obter Dossiê de Conformidade"}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-4">
+                  Pagamento seguro via Stripe. Acesso imediato após confirmação.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* General CTA Section */}
           <div className="legal-card p-8 bg-hero-gradient text-center">
             <div className="max-w-xl mx-auto">
               <div className="w-16 h-16 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-gold" />
               </div>
               <h2 className="font-display text-2xl font-bold text-primary-foreground mb-4">
-                Garanta sua Conformidade Completa
+                {user ? "Acesse seu Painel de Conformidade" : "Crie sua Conta Gratuita"}
               </h2>
               <p className="text-primary-foreground/80 mb-8">
-                Obtenha todos os templates, documentação e suporte necessários para 
-                estar em total conformidade com o EU AI Act antes do prazo.
+                {user 
+                  ? "Acompanhe seu progresso, baixe documentos e gerencie sua conformidade."
+                  : "Crie uma conta gratuita para salvar seus resultados e acessar recursos exclusivos."
+                }
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button variant="hero" size="lg" asChild>
-                  <Link to="/#pricing">
-                    Ver Planos de Conformidade
+                  <Link to={user ? "/dashboard" : "/login"}>
+                    {user ? "Acessar Dashboard" : "Criar Conta Gratuita"}
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>
