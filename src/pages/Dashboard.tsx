@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -138,6 +138,7 @@ const checklist = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
   const { hasCompliancePack, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
   const [tasks, setTasks] = useState(checklist);
@@ -146,6 +147,7 @@ const Dashboard = () => {
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [generatingLiteracyGuide, setGeneratingLiteracyGuide] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
@@ -350,6 +352,38 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [user, loading, navigate]);
+
+  // Verify payment if session_id is present in URL (redirect from Stripe)
+  useEffect(() => {
+    const verifyPaymentFromUrl = async () => {
+      const sessionId = searchParams.get("session_id");
+      if (!sessionId || !user || isVerifyingPayment) return;
+      
+      setIsVerifyingPayment(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-payment", {
+          body: { session_id: sessionId },
+        });
+
+        if (error) {
+          console.error("Payment verification error:", error);
+          toast.error("Erro ao verificar pagamento.");
+        } else if (data?.paid) {
+          toast.success("Pagamento confirmado! Documentos desbloqueados.");
+          await refreshPurchase();
+        }
+      } catch (error) {
+        console.error("Payment verification error:", error);
+      } finally {
+        setIsVerifyingPayment(false);
+        // Clean up the URL
+        searchParams.delete("session_id");
+        setSearchParams(searchParams, { replace: true });
+      }
+    };
+
+    verifyPaymentFromUrl();
+  }, [searchParams, user, refreshPurchase, setSearchParams, isVerifyingPayment]);
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const progressPercentage = (completedTasks / tasks.length) * 100;
