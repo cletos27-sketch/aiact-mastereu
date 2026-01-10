@@ -19,6 +19,7 @@ import {
   Calendar,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   Download,
   Eye,
   FileText,
@@ -146,6 +147,31 @@ const Dashboard = () => {
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [generatingLiteracyGuide, setGeneratingLiteracyGuide] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
+
+  const handleOpenCustomerPortal = async () => {
+    setIsOpeningPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      
+      if (error) {
+        console.error("Customer portal error:", error);
+        toast.error("Erro ao abrir portal de gestão. Tente novamente.");
+        return;
+      }
+      
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      } else if (data?.error) {
+        toast.error(data.error);
+      }
+    } catch (error) {
+      console.error("Customer portal error:", error);
+      toast.error("Erro ao abrir portal de gestão.");
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
 
   const handleDownloadLiteracyGuide = async () => {
     if (!hasCompliancePack) {
@@ -411,7 +437,22 @@ const Dashboard = () => {
                 Bem-vindo, {user.email}! Acompanhe seu progresso rumo à conformidade total.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {hasCompliancePack && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleOpenCustomerPortal}
+                  disabled={isOpeningPortal}
+                >
+                  {isOpeningPortal ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  Gerir Assinatura / Faturação
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
                 <Settings className="w-4 h-4 mr-2" />
                 Configurações
