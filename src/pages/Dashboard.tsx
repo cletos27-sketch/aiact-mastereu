@@ -11,7 +11,7 @@ import { PopupModal } from "react-calendly";
 import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { supabase } from "@/integrations/supabase/client";
-import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
+import { usePaymentStatus } from "@/hooks/usePaymentStatus";
 import PricingCards from "@/components/PricingCards";
 import { toast } from "sonner";
 import {
@@ -140,13 +140,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
-  const { hasCompliancePack, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
+  const { isPaid, loading: paymentLoading, markAsPaid } = usePaymentStatus();
   const [tasks, setTasks] = useState(checklist);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [calendlyOpen, setCalendlyOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [generatingLiteracyGuide, setGeneratingLiteracyGuide] = useState(false);
-  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const handleOpenCustomerPortal = async () => {
@@ -174,7 +173,7 @@ const Dashboard = () => {
   };
 
   const handleDownloadLiteracyGuide = async () => {
-    if (!hasCompliancePack) {
+    if (!isPaid) {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
       return;
     }
@@ -205,7 +204,7 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
-    if (!hasCompliancePack) {
+    if (!isPaid) {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
       return;
     }
@@ -361,37 +360,31 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
-  // Verify payment if session_id is present in URL (redirect from Stripe)
+  // Verify payment if URL contains payment=success
   useEffect(() => {
     const verifyPaymentFromUrl = async () => {
-      const sessionId = searchParams.get("session_id");
-      if (!sessionId || !user || isVerifyingPayment) return;
+      const currentUrl = window.location.href;
+      const paymentSuccess = searchParams.get("payment");
       
-      setIsVerifyingPayment(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("verify-payment", {
-          body: { session_id: sessionId },
-        });
-
-        if (error) {
+      // Check for payment=success in URL
+      if (paymentSuccess === "success" && user && !isPaid) {
+        try {
+          const success = await markAsPaid();
+          if (success) {
+            toast.success("Pagamento Confirmado! Seus documentos foram liberados.");
+          }
+        } catch (error) {
           console.error("Payment verification error:", error);
-          toast.error("Erro ao verificar pagamento.");
-        } else if (data?.paid) {
-          toast.success("Pagamento confirmado! Documentos desbloqueados.");
-          await refreshPurchase();
+        } finally {
+          // Clean up the URL
+          searchParams.delete("payment");
+          setSearchParams(searchParams, { replace: true });
         }
-      } catch (error) {
-        console.error("Payment verification error:", error);
-      } finally {
-        setIsVerifyingPayment(false);
-        // Clean up the URL
-        searchParams.delete("session_id");
-        setSearchParams(searchParams, { replace: true });
       }
     };
 
     verifyPaymentFromUrl();
-  }, [searchParams, user, refreshPurchase, setSearchParams, isVerifyingPayment]);
+  }, [searchParams, user, isPaid, markAsPaid, setSearchParams]);
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const progressPercentage = (completedTasks / tasks.length) * 100;
@@ -438,7 +431,7 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              {hasCompliancePack && (
+          {isPaid && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -483,12 +476,12 @@ const Dashboard = () => {
           </div>
 
           {/* Compliance Pack Status / Purchase CTA */}
-          {!purchaseLoading && (
-            <PricingCards hasCompliancePack={hasCompliancePack} />
+          {!paymentLoading && (
+            <PricingCards hasCompliancePack={isPaid} />
           )}
 
           {/* AI Literacy Guide Section - Compliance Pack Feature (show only if purchased) */}
-          {hasCompliancePack && (
+          {isPaid && (
             <div className="legal-card p-6 mb-8 bg-gradient-to-r from-gold/5 to-accent/5 border-gold/30">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold to-gold/70 flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -599,11 +592,11 @@ const Dashboard = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`transition-opacity ${hasCompliancePack ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
+                        className={`transition-opacity ${isPaid ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
                         onClick={() => handleDocumentDownload(doc.id, doc.name)}
-                        title={hasCompliancePack ? "Download" : "Requer Dossiê de Conformidade"}
+                        title={isPaid ? "Download" : "Requer Dossiê de Conformidade"}
                       >
-                        {hasCompliancePack ? (
+                        {isPaid ? (
                           <Download className="w-4 h-4" />
                         ) : (
                           <Lock className="w-4 h-4" />
