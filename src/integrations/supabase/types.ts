@@ -125,6 +125,45 @@ export type Database = {
         }
         Relationships: []
       }
+      system_updates: {
+        Row: {
+          content: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          priority: number
+          published_at: string
+          title: string
+          update_type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          published_at?: string
+          title: string
+          update_type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          published_at?: string
+          title?: string
+          update_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_purchases: {
         Row: {
           amount: number
