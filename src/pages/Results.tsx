@@ -365,7 +365,14 @@ const Results = () => {
 
   useEffect(() => {
     const saveAssessment = async () => {
-      if (!riskScore || !questionsData || !user || hasSaved.current) return;
+      if (!riskScore || !questionsData || hasSaved.current) return;
+      
+      // If user is not logged in, data is already in localStorage (saved in Assessment.tsx)
+      // It will be persisted when they log in via useAuth hook
+      if (!user) {
+        setIsSaving(false);
+        return;
+      }
       
       setIsSaving(true);
       try {
@@ -385,22 +392,34 @@ const Results = () => {
           .insert(insertData as any);
 
         if (saveError) {
-          if (import.meta.env.DEV) console.error("Error saving assessment:", saveError);
-          toast.error("Erro ao salvar avaliação. Tente novamente.");
+          console.error("Error saving assessment:", saveError);
+          // Show detailed error for debugging
+          if (saveError.code === "42501") {
+            toast.error("Erro de permissão: Faça login para salvar sua avaliação.");
+          } else if (saveError.code === "23505") {
+            // Duplicate - assessment already saved, mark as saved
+            hasSaved.current = true;
+            toast.info("Esta avaliação já foi salva anteriormente.");
+          } else {
+            toast.error(`Erro ao salvar: ${saveError.message || "Tente novamente."}`);
+          }
         } else {
           hasSaved.current = true;
+          // Clear localStorage since we saved successfully
+          localStorage.removeItem("pending_assessment_data");
           toast.success("Avaliação salva com sucesso!");
         }
       } catch (error) {
-        if (import.meta.env.DEV) console.error("Save error:", error);
-        toast.error("Erro ao salvar avaliação.");
+        console.error("Save error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+        toast.error(`Erro de conexão: ${errorMessage}`);
       } finally {
         setIsSaving(false);
       }
     };
 
     saveAssessment();
-  }, [riskScore, questionsData, riskClassification, user]);
+  }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
   if (!riskScore || !questionsData || !riskClassification) {
     return <Navigate to="/assessment" replace />;
