@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
@@ -8,12 +8,17 @@ export type PurchaseStatus = "active" | "canceled" | "payment_failed" | "pending
 // Product ID for Compliance Pack (TEST MODE)
 const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 
+// Polling interval in milliseconds (5 seconds)
+const POLLING_INTERVAL = 5000;
+
 export const usePurchaseStatus = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [hasCompliancePack, setHasCompliancePack] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const checkPurchaseStatus = useCallback(async (showToast = false) => {
     if (!user) {
@@ -83,36 +88,81 @@ export const usePurchaseStatus = () => {
     checkPurchaseStatus();
   }, [checkPurchaseStatus]);
 
-  // Real-time subscription to user_purchases changes
-  useEffect(() => {
-    if (!user) return;
+  // Start polling when realtime is not connected
+  const startPolling = useCallback(() => {
+    if (pollingIntervalRef.current) return; // Already polling
+    
+    console.log("Starting polling fallback for purchase status");
+    pollingIntervalRef.current = setInterval(() => {
+      checkPurchaseStatus(false);
+    }, POLLING_INTERVAL);
+  }, [checkPurchaseStatus]);
 
-    const channel = supabase
-      .channel(`user_purchases_${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "user_purchases",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log("Purchase status changed via realtime:", payload);
-          // Re-fetch the status when changes are detected with toast notification
-          checkPurchaseStatus(true);
-        }
-      )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          console.error("Realtime channel error for user_purchases");
-        }
-      });
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      console.log("Stopping polling fallback");
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  }, []);
+
+  // Real-time subscription to user_purchases changes
+  // Only subscribe AFTER auth is complete and user exists
+  useEffect(() => {
+    // Don't try to connect if auth is still loading or no user
+    if (authLoading || !user) {
+      setIsRealtimeConnected(false);
+      stopPolling();
+      return;
+    }
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      channel = supabase
+        .channel(`user_purchases_${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "user_purchases",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("Purchase status changed via realtime:", payload);
+            // Re-fetch the status when changes are detected with toast notification
+            checkPurchaseStatus(true);
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === "SUBSCRIBED") {
+            console.log("Realtime connected for user_purchases");
+            setIsRealtimeConnected(true);
+            stopPolling(); // Stop polling since realtime is working
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.error("Realtime channel error for user_purchases:", err);
+            setIsRealtimeConnected(false);
+            startPolling(); // Fallback to polling
+          } else if (status === "CLOSED") {
+            console.log("Realtime channel closed for user_purchases");
+            setIsRealtimeConnected(false);
+          }
+        });
+    } catch (err) {
+      console.error("Error setting up realtime subscription:", err);
+      setIsRealtimeConnected(false);
+      startPolling(); // Fallback to polling on error
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      stopPolling();
     };
-  }, [user, checkPurchaseStatus]);
+  }, [user, authLoading, checkPurchaseStatus, startPolling, stopPolling]);
 
   // Also check profiles.is_paid as backup
   useEffect(() => {
@@ -141,6 +191,7 @@ export const usePurchaseStatus = () => {
     hasCompliancePack, 
     purchaseStatus,
     isPaymentFailed,
+    isRealtimeConnected,
     loading,
     error,
     refresh: () => checkPurchaseStatus(true)
