@@ -185,125 +185,342 @@ const Dashboard = () => {
     generateQuickPDF(docId, docName);
   };
 
-  const documentPDFContent: Record<number, { title: string; content: string[] }> = {
+  const documentPDFContent: Record<number, { title: string; sections: { heading: string; items: string[] }[] }> = {
     1: {
-      title: "Dossiê Técnico Anexo IV - EU AI Act",
-      content: [
-        "1. DESCRIÇÃO GERAL DO SISTEMA DE IA",
-        "Conforme Anexo IV do Regulamento (UE) 2024/1689 (EU AI Act)",
-        "",
-        "2. INFORMAÇÕES EXIGIDAS PELO ANEXO IV",
-        "• Nome e versão do sistema de IA",
-        "• Identidade e dados de contacto do fornecedor",
-        "• Descrição da finalidade do sistema",
-        "• Descrição detalhada dos elementos do sistema e do processo de desenvolvimento",
-        "",
-        "3. GESTÃO DE RISCOS (Art. 9)",
-        "• Sistema de gestão de riscos implementado",
-        "• Identificação e análise de riscos conhecidos e previsíveis",
-        "• Medidas de gestão e mitigação adotadas",
-        "",
-        "4. DADOS E GOVERNAÇÃO DE DADOS (Art. 10)",
-        "• Práticas de formação, validação e ensaio de dados",
-        "• Conjuntos de dados utilizados",
-        "• Medidas de qualidade de dados",
-      ],
+      title: "Dossiê Técnico — Anexo IV do Regulamento (UE) 2024/1689",
+      sections: [
+        {
+          heading: "1. DESCRIÇÃO GERAL DO SISTEMA DE IA",
+          items: [
+            "Nome do sistema de IA e versão de lançamento",
+            "Nome comercial e identidade jurídica do fornecedor (incluindo endereço da sede e contactos)",
+            "Descrição clara e detalhada da finalidade pretendida do sistema de IA",
+            "Data de colocação no mercado ou entrada em serviço e histórico de versões",
+            "Descrição de como o sistema de IA interage com hardware ou software não integrado"
+          ]
+        },
+        {
+          heading: "2. ARQUITETURA E ALGORITMOS",
+          items: [
+            "Arquitetura geral do sistema com diagrama explicativo dos componentes principais",
+            "Descrição detalhada dos elementos do sistema, incluindo algoritmos, modelos e processos computacionais",
+            "Técnicas de machine learning utilizadas (supervisionado, não-supervisionado, por reforço, etc.)",
+            "Metodologia de design e escolhas técnicas fundamentais",
+            "Recursos computacionais necessários (hardware, tempo de processamento, memória)",
+            "Especificações de inputs e outputs do sistema com formatos e limitações"
+          ]
+        },
+        {
+          heading: "3. GESTÃO DE RISCOS — Artigo 9",
+          items: [
+            "Sistema de gestão de riscos implementado e metodologia de identificação de perigos",
+            "Identificação e análise de riscos conhecidos e razoavelmente previsíveis para a saúde, segurança ou direitos fundamentais",
+            "Avaliação dos riscos que podem surgir quando o sistema é utilizado conforme a finalidade prevista e em condições de utilização indevida razoavelmente previsível",
+            "Medidas de gestão de riscos adotadas, incluindo soluções técnicas e organizacionais",
+            "Riscos residuais aceitáveis com justificação documentada",
+            "Testes e validação das medidas de mitigação implementadas",
+            "Procedimentos de monitorização contínua de riscos e atualização da avaliação"
+          ]
+        },
+        {
+          heading: "4. DADOS DE TREINAMENTO E GOVERNANÇA — Artigo 10",
+          items: [
+            "Descrição detalhada dos conjuntos de dados de treino, validação e teste utilizados",
+            "Origem e proveniência dos dados, incluindo critérios de seleção e fontes",
+            "Práticas de governança de dados implementadas (recolha, preparação, rotulagem, limpeza)",
+            "Análise de vieses potenciais nos dados e medidas de mitigação",
+            "Medidas de qualidade dos dados: completude, representatividade e adequação ao contexto geográfico/demográfico",
+            "Descrição de lacunas ou deficiências conhecidas nos conjuntos de dados",
+            "Procedimentos de proteção de dados pessoais conforme RGPD quando aplicável"
+          ]
+        },
+        {
+          heading: "5. MEDIDAS DE SUPERVISÃO HUMANA — Artigo 14",
+          items: [
+            "Descrição das medidas de interface homem-máquina que permitem supervisão efetiva",
+            "Funcionalidades técnicas que permitem a uma pessoa singular compreender as capacidades e limitações do sistema",
+            "Mecanismos que permitem monitorizar a operação do sistema de IA",
+            "Capacidade de interpretar corretamente os outputs do sistema",
+            "Funcionalidade de interrupção (botão de paragem) ou intervenção imediata",
+            "Procedimentos para decidir não utilizar o sistema ou anular decisões automatizadas",
+            "Formação requerida para operadores humanos e competências mínimas"
+          ]
+        },
+        {
+          heading: "6. DESEMPENHO E ROBUSTEZ — Artigo 15",
+          items: [
+            "Métricas de desempenho utilizadas e valores obtidos em testes",
+            "Níveis esperados de precisão, incluindo métricas específicas por grupo demográfico",
+            "Medidas de robustez face a erros, falhas ou inconsistências nos inputs",
+            "Medidas de resiliência contra tentativas de manipulação por terceiros (adversarial attacks)",
+            "Comportamento do sistema em situações não previstas (edge cases)",
+            "Requisitos e medidas de cibersegurança implementadas"
+          ]
+        },
+        {
+          heading: "7. LOGGING E RASTREABILIDADE — Artigo 12",
+          items: [
+            "Capacidades de registo automático (logging) ao longo do ciclo de vida",
+            "Dados registados para cada operação (timestamp, inputs, outputs, identificadores)",
+            "Período de conservação dos registos e formato de armazenamento",
+            "Procedimentos de acesso aos logs para fins de auditoria",
+            "Mecanismos que garantem a integridade e autenticidade dos registos"
+          ]
+        }
+      ]
     },
     2: {
-      title: "Instruções de Uso - Artigo 13 EU AI Act",
-      content: [
-        "1. INFORMAÇÕES PARA O RESPONSÁVEL PELA IMPLANTAÇÃO",
-        "Conforme Artigo 13 do Regulamento (UE) 2024/1689",
-        "",
-        "2. CONTEÚDO DAS INSTRUÇÕES",
-        "• Identidade e dados de contacto do fornecedor",
-        "• Características, capacidades e limitações do sistema",
-        "• Alterações ao sistema ao longo do seu ciclo de vida",
-        "",
-        "3. SUPERVISÃO HUMANA (Art. 14)",
-        "• Medidas de interface homem-máquina",
-        "• Capacidades e limitações de desempenho do sistema",
-        "• Riscos conhecidos para a saúde, segurança ou direitos fundamentais",
-        "",
-        "4. ESPECIFICAÇÕES TÉCNICAS",
-        "• Níveis previstos de precisão e robustez",
-        "• Medidas de cibersegurança implementadas",
-      ],
+      title: "Instruções de Uso — Artigo 13 do Regulamento (UE) 2024/1689",
+      sections: [
+        {
+          heading: "1. INFORMAÇÕES DE IDENTIFICAÇÃO",
+          items: [
+            "Nome, endereço e contactos do fornecedor do sistema de IA",
+            "Nome e versão do sistema de IA",
+            "Data de emissão destas instruções e número de revisão"
+          ]
+        },
+        {
+          heading: "2. FINALIDADE PRETENDIDA E CONTEXTO DE UTILIZAÇÃO",
+          items: [
+            "Descrição clara da finalidade para a qual o sistema foi desenvolvido",
+            "Contexto(s) específico(s) de utilização previstos pelo fornecedor",
+            "Setores de atividade ou domínios de aplicação",
+            "Grupos-alvo de utilizadores finais (operadores, afetados, público)",
+            "Cenários de utilização aprovados e não aprovados"
+          ]
+        },
+        {
+          heading: "3. CAPACIDADES E LIMITAÇÕES DO SISTEMA",
+          items: [
+            "Descrição detalhada das capacidades funcionais do sistema",
+            "LIMITAÇÕES CONHECIDAS: situações em que o sistema pode falhar ou ter desempenho inferior",
+            "Circunstâncias previsíveis que podem afetar a precisão ou fiabilidade",
+            "Condições de operação ideais e degradação esperada fora dessas condições",
+            "Riscos conhecidos para saúde, segurança ou direitos fundamentais mesmo em uso correto",
+            "Especificações de hardware/software necessário para funcionamento adequado"
+          ]
+        },
+        {
+          heading: "4. NÍVEIS DE PRECISÃO E MÉTRICAS DE DESEMPENHO",
+          items: [
+            "Métricas de precisão declaradas pelo fornecedor com metodologia de teste",
+            "Desagregação de métricas por subgrupos relevantes (idade, género, origem, etc.)",
+            "Taxa de falsos positivos e falsos negativos para o contexto de aplicação",
+            "Intervalos de confiança ou margens de erro dos outputs",
+            "Condições sob as quais as métricas foram obtidas (laboratório vs. campo)"
+          ]
+        },
+        {
+          heading: "5. COMO INTERPRETAR OS RESULTADOS — EVITAR VIÉS DE AUTOMAÇÃO",
+          items: [
+            "ATENÇÃO: Os outputs deste sistema são AUXILIARES e não substituem o julgamento humano",
+            "Nunca aceite automaticamente uma decisão do sistema sem análise crítica",
+            "Verifique sempre se o resultado faz sentido no contexto específico da situação",
+            "Compare o output com outras fontes de informação disponíveis",
+            "Considere fatores contextuais que o sistema pode não ter considerado",
+            "Em caso de dúvida, consulte um especialista humano antes de prosseguir",
+            "Documente suas razões quando aceitar ou rejeitar uma recomendação do sistema"
+          ]
+        },
+        {
+          heading: "6. SUPERVISÃO HUMANA REQUERIDA",
+          items: [
+            "Nível de supervisão humana obrigatório para cada tipo de decisão",
+            "Competências e formação mínima exigida para operadores",
+            "Procedimentos de intervenção quando o sistema apresenta outputs suspeitos",
+            "Como utilizar a funcionalidade de interrupção de emergência",
+            "Procedimentos de escalação para decisões de alto impacto"
+          ]
+        },
+        {
+          heading: "7. MANUTENÇÃO E ATUALIZAÇÕES",
+          items: [
+            "Frequência esperada de atualizações pelo fornecedor",
+            "Como identificar a versão atual do sistema",
+            "Procedimentos para instalação de atualizações de segurança",
+            "Contactos de suporte técnico do fornecedor"
+          ]
+        }
+      ]
     },
     3: {
-      title: "Guia de Literacia em IA - Artigo 4 EU AI Act",
-      content: [
-        "1. OBRIGAÇÃO DE LITERACIA EM IA",
-        "Conforme Artigo 4 do Regulamento (UE) 2024/1689",
-        "",
-        "2. REQUISITOS DE FORMAÇÃO",
-        "• Fornecedores e responsáveis pela implantação devem assegurar literacia suficiente",
-        "• Competências, conhecimentos e compreensão de IA adequados",
-        "• Tendo em conta o contexto e as pessoas que utilizam os sistemas",
-        "",
-        "3. CONTEÚDO DA FORMAÇÃO",
-        "• Conceitos fundamentais de IA",
-        "• Limitações e riscos dos sistemas de IA",
-        "• Identificação de vieses algorítmicos",
-        "• Direitos dos afetados por sistemas de IA",
-        "",
-        "4. PROCEDIMENTOS INTERNOS",
-        "• Processo de reporte de incidentes",
-        "• Canais de comunicação para questões de IA",
-      ],
+      title: "Guia de Literacia em IA — Artigo 4 do Regulamento (UE) 2024/1689",
+      sections: [
+        {
+          heading: "1. OBRIGAÇÃO LEGAL DE LITERACIA EM IA",
+          items: [
+            "O Artigo 4 do EU AI Act exige que provedores e operadores garantam literacia suficiente em IA",
+            "Esta formação é OBRIGATÓRIA para todos os colaboradores que utilizam ou supervisionam sistemas de IA",
+            "A literacia deve considerar: conhecimentos técnicos, experiência, educação e contexto de utilização",
+            "O incumprimento pode resultar em sanções administrativas significativas"
+          ]
+        },
+        {
+          heading: "2. O QUE É INTELIGÊNCIA ARTIFICIAL",
+          items: [
+            "IA são sistemas computacionais que realizam tarefas normalmente requerendo inteligência humana",
+            "Machine Learning: sistemas que aprendem padrões a partir de dados",
+            "Deep Learning: redes neurais complexas para reconhecimento de padrões avançados",
+            "IA Generativa: sistemas que criam conteúdo novo (texto, imagem, código)",
+            "IMPORTANTE: A IA não tem consciência, compreensão real ou intenções próprias"
+          ]
+        },
+        {
+          heading: "3. SEUS DIREITOS COMO COLABORADOR",
+          items: [
+            "Direito a ser informado quando interage com um sistema de IA",
+            "Direito a formação adequada sobre os sistemas de IA que utiliza",
+            "Direito a compreender como as decisões de IA afetam seu trabalho",
+            "Direito a questionar outputs de IA que pareçam incorretos ou injustos",
+            "Direito a escalar preocupações sobre o funcionamento da IA",
+            "Direito a não ser exclusivamente avaliado por decisões automatizadas"
+          ]
+        },
+        {
+          heading: "4. SUAS RESPONSABILIDADES",
+          items: [
+            "Utilizar os sistemas de IA conforme as diretrizes e formação recebida",
+            "Manter supervisão crítica sobre todas as decisões assistidas por IA",
+            "Reportar comportamentos inesperados ou resultados questionáveis",
+            "Proteger dados sensíveis ao interagir com sistemas de IA",
+            "Participar de formações e atualizações sobre literacia em IA",
+            "Documentar incidentes ou anomalias conforme procedimentos internos"
+          ]
+        },
+        {
+          heading: "5. COMO IDENTIFICAR VIÉS (BIAS) EM OUTPUTS DE IA",
+          items: [
+            "Viés: erros sistemáticos que resultam em tratamento injusto de grupos ou indivíduos",
+            "SINAIS DE ALERTA:",
+            "- Padrões sistemáticos de resultados diferentes para grupos demográficos",
+            "- Resultados que reforçam estereótipos conhecidos",
+            "- Inconsistências para dados similares apresentados de formas diferentes",
+            "- Dificuldade do sistema com nomes, idiomas ou referências culturais diversas",
+            "CHECKLIST: O resultado é consistente? Há padrões suspeitos? Faz sentido no contexto?"
+          ]
+        },
+        {
+          heading: "6. PROCEDIMENTO DE REPORTE DE ERROS DE IA",
+          items: [
+            "PASSO 1: Documentar — capture screenshots, anote data/hora, inputs e outputs problemáticos",
+            "PASSO 2: Classificar severidade — menor (não afeta decisões), moderado (pode afetar), crítico (dano potencial)",
+            "PASSO 3: Reportar — utilize o canal oficial de compliance ou formulário de incidentes",
+            "PASSO 4: Suspender uso se crítico — aguarde orientação da equipe técnica",
+            "PASSO 5: Acompanhar — verifique se medidas corretivas foram implementadas",
+            "PROTEÇÃO: A organização garante proteção a quem reportar incidentes de boa-fé"
+          ]
+        },
+        {
+          heading: "7. BOAS PRÁTICAS DIÁRIAS",
+          items: [
+            "ANTES: verifique formação, compreenda limitações, confirme qualidade dos dados de entrada",
+            "DURANTE: mantenha supervisão crítica, não aceite tudo automaticamente, compare com seu conhecimento",
+            "APÓS: revise qualidade das decisões, forneça feedback, mantenha-se atualizado",
+            "PRINCÍPIO: A IA é ferramenta de apoio — VOCÊ é responsável pelas decisões finais"
+          ]
+        },
+        {
+          heading: "8. NÍVEIS DE RISCO DO EU AI ACT",
+          items: [
+            "RISCO INACEITÁVEL (PROIBIDO): manipulação subliminar, exploração de vulnerabilidades, pontuação social",
+            "ALTO RISCO: recrutamento, educação, serviços essenciais (crédito/saúde), aplicação da lei",
+            "RISCO LIMITADO: chatbots, deepfakes — requer transparência sobre natureza artificial",
+            "RISCO MÍNIMO: filtros de spam, jogos — sem obrigações específicas além de boas práticas"
+          ]
+        }
+      ]
     },
     4: {
-      title: "Registro de Logs de Auditoria",
-      content: [
-        "1. REQUISITOS DE LOGGING (Art. 12)",
-        "Os sistemas de IA de alto risco devem manter logs automáticos durante todo o ciclo de vida.",
-        "",
-        "2. INFORMAÇÕES A REGISTRAR",
-        "• Data e hora de cada utilização",
-        "• Identificação do operador/utilizador",
-        "• Dados de entrada e saída",
-        "• Período de conservação dos registos",
-        "",
-        "3. RASTREABILIDADE",
-        "• Permitir rastrear o funcionamento do sistema",
-        "• Facilitar monitorização pós-comercialização",
-      ],
+      title: "Registro de Logs de Auditoria — Artigo 12 EU AI Act",
+      sections: [
+        {
+          heading: "1. REQUISITOS DE LOGGING",
+          items: [
+            "Sistemas de IA de alto risco devem manter registos automáticos durante todo o ciclo de vida",
+            "Os logs devem permitir rastrear o funcionamento do sistema e facilitar monitorização pós-comercialização"
+          ]
+        },
+        {
+          heading: "2. INFORMAÇÕES A REGISTRAR",
+          items: [
+            "Data e hora de cada utilização do sistema",
+            "Identificação do operador/utilizador responsável",
+            "Dados de entrada fornecidos ao sistema",
+            "Outputs/decisões gerados pelo sistema",
+            "Período mínimo de conservação dos registos: conforme regulamentação setorial aplicável"
+          ]
+        },
+        {
+          heading: "3. PROCEDIMENTOS DE ACESSO",
+          items: [
+            "Definir quem tem autorização para aceder aos logs",
+            "Mecanismos de integridade para evitar adulteração",
+            "Procedimentos de backup e recuperação"
+          ]
+        }
+      ]
     },
     5: {
-      title: "Avaliação de Impacto em Direitos Fundamentais",
-      content: [
-        "1. IDENTIFICAÇÃO DO SISTEMA (Art. 27)",
-        "• Nome do sistema:",
-        "• Operador responsável:",
-        "",
-        "2. ANÁLISE DE DIREITOS IMPACTADOS",
-        "• Dignidade humana",
-        "• Liberdade e autonomia",
-        "• Não-discriminação",
-        "• Proteção de dados pessoais",
-        "",
-        "3. MEDIDAS DE MITIGAÇÃO",
-        "• Salvaguardas implementadas",
-        "• Procedimentos de supervisão humana",
-      ],
+      title: "Avaliação de Impacto em Direitos Fundamentais — Artigo 27 EU AI Act",
+      sections: [
+        {
+          heading: "1. IDENTIFICAÇÃO DO SISTEMA",
+          items: [
+            "Nome do sistema de IA",
+            "Operador responsável pela implantação",
+            "Data da avaliação"
+          ]
+        },
+        {
+          heading: "2. DIREITOS FUNDAMENTAIS IMPACTADOS",
+          items: [
+            "Dignidade humana — análise de impacto",
+            "Liberdade e autonomia — análise de impacto",
+            "Não-discriminação — análise de impacto",
+            "Proteção de dados pessoais — análise de impacto",
+            "Outros direitos relevantes ao contexto"
+          ]
+        },
+        {
+          heading: "3. MEDIDAS DE MITIGAÇÃO",
+          items: [
+            "Salvaguardas técnicas e organizacionais implementadas",
+            "Procedimentos de supervisão humana",
+            "Mecanismos de recurso para afetados"
+          ]
+        }
+      ]
     },
     6: {
-      title: "Política de Supervisão Humana",
-      content: [
-        "1. OBJETIVO (Art. 14)",
-        "Estabelecer diretrizes para supervisão humana adequada conforme Artigo 14.",
-        "",
-        "2. PRINCÍPIOS DE SUPERVISÃO",
-        "• Capacidade de compreender o funcionamento",
-        "• Capacidade de monitorar a operação",
-        "• Capacidade de intervir ou interromper",
-        "",
-        "3. RESPONSABILIDADES",
-        "• Designação de responsáveis",
-        "• Formação adequada dos supervisores",
-        "• Procedimentos de escalação",
-      ],
-    },
+      title: "Política de Supervisão Humana — Artigo 14 EU AI Act",
+      sections: [
+        {
+          heading: "1. OBJETIVO",
+          items: [
+            "Estabelecer diretrizes para supervisão humana adequada conforme Artigo 14 do EU AI Act"
+          ]
+        },
+        {
+          heading: "2. PRINCÍPIOS DE SUPERVISÃO",
+          items: [
+            "Capacidade de compreender o funcionamento do sistema",
+            "Capacidade de monitorar a operação em tempo real",
+            "Capacidade de intervir, corrigir ou interromper o sistema",
+            "Capacidade de decidir não utilizar o sistema em casos específicos"
+          ]
+        },
+        {
+          heading: "3. RESPONSABILIDADES",
+          items: [
+            "Designação formal de responsáveis pela supervisão",
+            "Formação obrigatória e certificação dos supervisores",
+            "Procedimentos de escalação para decisões críticas",
+            "Documentação de todas as intervenções humanas"
+          ]
+        }
+      ]
+    }
   };
 
   const generateQuickPDF = (docId: number, docName: string) => {
@@ -312,64 +529,115 @@ const Dashboard = () => {
 
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
     let yPosition = 20;
+    let pageNumber = 1;
+
+    const addFooter = () => {
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, pageHeight - 20, pageWidth, 20, "F");
+      pdf.setDrawColor(212, 175, 55);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
+      pdf.setTextColor(120, 120, 120);
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(
+        `EU AI Act Compliance Tool • Versão 1.0 • ${new Date().toLocaleDateString("pt-BR")} • Página ${pageNumber}`,
+        margin,
+        pageHeight - 10
+      );
+    };
+
+    const checkPageBreak = (neededSpace: number = 30) => {
+      if (yPosition > pageHeight - neededSpace - 25) {
+        addFooter();
+        pdf.addPage();
+        pageNumber++;
+        yPosition = 30;
+        // Add header on new page
+        pdf.setFillColor(12, 25, 41);
+        pdf.rect(0, 0, pageWidth, 20, "F");
+        pdf.setFillColor(212, 175, 55);
+        pdf.rect(0, 20, pageWidth, 2, "F");
+        pdf.setTextColor(212, 175, 55);
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(template.title, margin, 13);
+      }
+    };
 
     // Header
     pdf.setFillColor(12, 25, 41);
-    pdf.rect(0, 0, pageWidth, 40, "F");
-    
+    pdf.rect(0, 0, pageWidth, 45, "F");
+    pdf.setFillColor(212, 175, 55);
+    pdf.rect(0, 45, pageWidth, 2, "F");
+
     pdf.setTextColor(212, 175, 55);
     pdf.setFontSize(16);
     pdf.setFont("helvetica", "bold");
-    pdf.text(template.title, margin, 25);
+    const titleLines = pdf.splitTextToSize(template.title, pageWidth - 2 * margin);
+    pdf.text(titleLines, margin, 22);
 
-    pdf.setTextColor(150, 150, 150);
+    pdf.setTextColor(200, 200, 200);
     pdf.setFontSize(10);
-    pdf.text(`EU AI Act Compliance • ${new Date().toLocaleDateString("pt-BR")}`, margin, 35);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Regulamento (UE) 2024/1689 — EU AI Act`, margin, 35);
+    pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`, margin, 42);
 
-    yPosition = 55;
+    yPosition = 60;
 
     // Content
-    pdf.setTextColor(50, 50, 50);
-    
-    for (const line of template.content) {
-      if (line === "") {
-        yPosition += 5;
-        continue;
-      }
+    for (const section of template.sections) {
+      checkPageBreak(40);
 
-      if (line.match(/^\d+\./)) {
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(12, 25, 41);
-        yPosition += 5;
-      } else if (line.startsWith("•")) {
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
+      // Section heading with background
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin - 3, yPosition - 5, pageWidth - 2 * margin + 6, 12, "F");
+      pdf.setFillColor(212, 175, 55);
+      pdf.rect(margin - 3, yPosition - 5, 3, 12, "F");
+
+      pdf.setTextColor(12, 25, 41);
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(section.heading, margin + 5, yPosition + 3);
+      yPosition += 18;
+
+      // Section items
+      for (const item of section.items) {
+        checkPageBreak(15);
+
         pdf.setTextColor(80, 80, 80);
-      } else {
         pdf.setFontSize(10);
         pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(60, 60, 60);
+
+        // Check if it's a sub-item (starts with -)
+        const isSubItem = item.startsWith("-");
+        const bulletX = isSubItem ? margin + 10 : margin;
+        const textX = bulletX + 6;
+        const textContent = isSubItem ? item.substring(2) : item;
+
+        // Gold bullet
+        pdf.setFillColor(212, 175, 55);
+        pdf.circle(bulletX + 2, yPosition - 1.5, 1.2, "F");
+
+        const lines = pdf.splitTextToSize(textContent, pageWidth - textX - margin);
+        for (const line of lines) {
+          checkPageBreak(8);
+          pdf.text(line, textX, yPosition);
+          yPosition += 5.5;
+        }
+        yPosition += 2;
       }
 
-      const lines = pdf.splitTextToSize(line, pageWidth - 2 * margin);
-      for (const textLine of lines) {
-        pdf.text(textLine, margin, yPosition);
-        yPosition += 6;
-      }
+      yPosition += 8;
     }
 
-    // Footer
-    pdf.setFillColor(245, 245, 245);
-    pdf.rect(0, 280, pageWidth, 17, "F");
-    pdf.setTextColor(150, 150, 150);
-    pdf.setFontSize(8);
-    pdf.text("EU AI Act Compliance Tool • Documento gerado automaticamente", margin, 288);
-
-    pdf.save(`${docName.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`);
+    addFooter();
+    pdf.save(`${docName.replace(/\s+/g, "_")}_v1.0_${new Date().toISOString().split("T")[0]}.pdf`);
   };
+
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -471,31 +739,21 @@ const Dashboard = () => {
                 Bem-vindo, {user.email}! Acompanhe seu progresso rumo à conformidade total.
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {hasCompliancePack && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleOpenCustomerPortal}
-                  disabled={isOpeningPortal}
-                >
-                  {isOpeningPortal ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <CreditCard className="w-4 h-4 mr-2" />
-                  )}
-                  Gerir Assinatura / Faturação
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                Configurações
+            {hasCompliancePack && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleOpenCustomerPortal}
+                disabled={isOpeningPortal}
+              >
+                {isOpeningPortal ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4 mr-2" />
+                )}
+                Gerir Assinatura / Faturação
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
+            )}
           </div>
 
           {/* System Notifications Section */}
