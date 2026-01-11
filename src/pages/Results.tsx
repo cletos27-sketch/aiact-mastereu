@@ -57,7 +57,6 @@ const Results = () => {
   }) || {};
   
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
-  const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const hasSaved = useRef(false);
 
@@ -363,62 +362,64 @@ const Results = () => {
     }
   }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
+  // Save assessment in background - non-blocking, fire and forget
   useEffect(() => {
-    const saveAssessment = async () => {
+    // Don't block the UI, save in background
+    const saveInBackground = () => {
       if (!riskScore || !questionsData || hasSaved.current) return;
       
       // If user is not logged in, data is already in localStorage (saved in Assessment.tsx)
       // It will be persisted when they log in via useAuth hook
       if (!user) {
-        setIsSaving(false);
         return;
       }
       
-      setIsSaving(true);
-      try {
-        const insertData = {
-          user_id: user.id,
-          user_email: user.email || "",
-          responses: questionsData as unknown as Record<string, unknown>,
-          risk_score: riskScore.score,
-          risk_classification: riskClassification,
-          legal_justification: generateLegalJustification(),
-          relevant_articles: getRelevantArticles(),
-          priority_actions: getPriorityActions(),
-        };
-        
-        const { error: saveError } = await supabase
-          .from("risk_assessments")
-          .insert(insertData as any);
+      // Mark as saving started to prevent duplicates
+      hasSaved.current = true;
+      
+      const insertData = {
+        user_id: user.id,
+        user_email: user.email || "",
+        responses: questionsData as unknown as Record<string, unknown>,
+        risk_score: riskScore.score,
+        risk_classification: riskClassification,
+        legal_justification: generateLegalJustification(),
+        relevant_articles: getRelevantArticles(),
+        priority_actions: getPriorityActions(),
+      };
+      
+      // Fire and forget - use async IIFE to handle errors properly
+      (async () => {
+        try {
+          const { error: saveError } = await supabase
+            .from("risk_assessments")
+            .insert(insertData as any);
 
-        if (saveError) {
-          console.error("Error saving assessment:", saveError);
-          // Show detailed error for debugging
-          if (saveError.code === "42501") {
-            toast.error("Erro de permissão: Faça login para salvar sua avaliação.");
-          } else if (saveError.code === "23505") {
-            // Duplicate - assessment already saved, mark as saved
-            hasSaved.current = true;
-            toast.info("Esta avaliação já foi salva anteriormente.");
+          if (saveError) {
+            console.error("Error saving assessment:", saveError);
+            hasSaved.current = false; // Allow retry
+            
+            if (saveError.code === "42501") {
+              console.warn("Permission error - user may need to re-authenticate");
+            } else if (saveError.code === "23505") {
+              // Duplicate - assessment already saved
+              hasSaved.current = true;
+            }
           } else {
-            toast.error(`Erro ao salvar: ${saveError.message || "Tente novamente."}`);
+            // Clear localStorage since we saved successfully
+            localStorage.removeItem("pending_assessment_data");
+            console.log("Assessment saved successfully in background");
           }
-        } else {
-          hasSaved.current = true;
-          // Clear localStorage since we saved successfully
-          localStorage.removeItem("pending_assessment_data");
-          toast.success("Avaliação salva com sucesso!");
+        } catch (error) {
+          console.error("Background save error:", error);
+          hasSaved.current = false; // Allow retry
         }
-      } catch (error) {
-        console.error("Save error:", error);
-        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
-        toast.error(`Erro de conexão: ${errorMessage}`);
-      } finally {
-        setIsSaving(false);
-      }
+      })();
     };
 
-    saveAssessment();
+    // Run save in background with slight delay to not block initial render
+    const timeoutId = setTimeout(saveInBackground, 100);
+    return () => clearTimeout(timeoutId);
   }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
   if (!riskScore || !questionsData || !riskClassification) {
