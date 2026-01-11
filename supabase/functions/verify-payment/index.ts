@@ -54,7 +54,44 @@ serve(async (req) => {
     logStep("Session retrieved", { 
       status: session.payment_status, 
       customerId: session.customer,
-      mode: session.mode 
+      mode: session.mode,
+      clientReferenceId: session.client_reference_id,
+      customerEmail: session.customer_email
+    });
+
+    // Validate session ownership - ensure the authenticated user owns this session
+    const sessionUserId = session.client_reference_id;
+    const sessionEmail = session.customer_email;
+    
+    if (sessionUserId && sessionUserId !== user.id) {
+      logStep("Session ownership mismatch by user ID", {
+        sessionUserId,
+        authenticatedUserId: user.id
+      });
+      return new Response(JSON.stringify({ 
+        error: "Session does not belong to authenticated user" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
+    
+    if (!sessionUserId && sessionEmail && sessionEmail !== user.email) {
+      logStep("Session ownership mismatch by email", {
+        sessionEmail,
+        authenticatedEmail: user.email
+      });
+      return new Response(JSON.stringify({ 
+        error: "Session does not belong to authenticated user" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
+    
+    logStep("Session ownership verified", { 
+      method: sessionUserId ? "user_id" : "email",
+      match: true 
     });
 
     const isPaid = session.payment_status === "paid" || 
