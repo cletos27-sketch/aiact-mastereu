@@ -49,6 +49,16 @@ interface SystemUpdate {
   published_at: string;
 }
 
+// Types for system announcements (global notifications)
+interface SystemAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  announcement_type: string;
+  priority: number;
+  published_at: string;
+}
+
 const documents = [
   {
     id: 1,
@@ -104,7 +114,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
-  const { hasCompliancePack, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
+  const { hasCompliancePack, isPaymentFailed, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
   const { 
     tasks, 
     initialLoading: tasksLoading, 
@@ -120,7 +130,9 @@ const Dashboard = () => {
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
   const [systemUpdates, setSystemUpdates] = useState<SystemUpdate[]>([]);
+  const [systemAnnouncements, setSystemAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [updatesLoading, setUpdatesLoading] = useState(true);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
 
   const handleOpenCustomerPortal = async () => {
     setIsOpeningPortal(true);
@@ -147,6 +159,10 @@ const Dashboard = () => {
   };
 
   const handleDownloadLiteracyGuide = async () => {
+    if (isPaymentFailed) {
+      toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
+      return;
+    }
     if (!hasCompliancePack) {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
       return;
@@ -178,6 +194,10 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
+    if (isPaymentFailed) {
+      toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
+      return;
+    }
     if (!hasCompliancePack) {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
       return;
@@ -674,6 +694,34 @@ const Dashboard = () => {
     fetchSystemUpdates();
   }, [user]);
 
+  // Fetch system announcements (global notifications)
+  useEffect(() => {
+    const fetchSystemAnnouncements = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("system_announcements")
+          .select("*")
+          .order("priority", { ascending: false })
+          .order("published_at", { ascending: false })
+          .limit(5);
+        
+        if (error) {
+          console.error("Error fetching system announcements:", error);
+        } else {
+          setSystemAnnouncements((data as SystemAnnouncement[]) || []);
+        }
+      } catch (error) {
+        console.error("Error fetching system announcements:", error);
+      } finally {
+        setAnnouncementsLoading(false);
+      }
+    };
+
+    fetchSystemAnnouncements();
+  }, [user]);
+
   // Verify payment if session_id is present in URL (redirect from Stripe)
   useEffect(() => {
     const verifyPaymentFromUrl = async () => {
@@ -755,6 +803,123 @@ const Dashboard = () => {
               </Button>
             )}
           </div>
+
+          {/* Payment Failed Warning Banner */}
+          {isPaymentFailed && (
+            <div className="legal-card p-6 mb-8 border-red-500/50 bg-red-500/10">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="font-display text-lg font-semibold text-red-500 mb-1">
+                    ⚠️ Assinatura Pendente
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Houve um problema com o pagamento da sua assinatura. Os downloads de documentos estão temporariamente bloqueados.
+                    Por favor, atualize seus dados de pagamento para continuar usando o serviço.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="border-red-500 text-red-500 hover:bg-red-500/10"
+                  onClick={handleOpenCustomerPortal}
+                  disabled={isOpeningPortal}
+                >
+                  {isOpeningPortal ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  Atualizar Pagamento
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Global System Announcements Section */}
+          {!announcementsLoading && systemAnnouncements.length > 0 && (
+            <div className="legal-card p-6 mb-8 border-primary/30 bg-primary/5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-foreground">
+                    Comunicados Importantes
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Mensagens importantes da administração
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {systemAnnouncements.map((announcement) => {
+                  const getAnnouncementIcon = (type: string) => {
+                    switch (type) {
+                      case "urgent":
+                        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+                      case "update":
+                        return <Info className="w-4 h-4 text-blue-500" />;
+                      case "maintenance":
+                        return <Settings className="w-4 h-4 text-amber-500" />;
+                      default:
+                        return <Bell className="w-4 h-4 text-primary" />;
+                    }
+                  };
+                  
+                  const getAnnouncementBadge = (type: string) => {
+                    switch (type) {
+                      case "urgent":
+                        return { bg: "bg-red-500/10", text: "text-red-500", label: "Urgente" };
+                      case "update":
+                        return { bg: "bg-blue-500/10", text: "text-blue-500", label: "Atualização" };
+                      case "maintenance":
+                        return { bg: "bg-amber-500/10", text: "text-amber-500", label: "Manutenção" };
+                      default:
+                        return { bg: "bg-primary/10", text: "text-primary", label: "Comunicado" };
+                    }
+                  };
+                  
+                  const badge = getAnnouncementBadge(announcement.announcement_type);
+                  
+                  return (
+                    <div
+                      key={announcement.id}
+                      className="p-4 rounded-lg border border-border hover:border-primary/30 transition-all bg-background"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          {getAnnouncementIcon(announcement.announcement_type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-sm text-foreground">
+                              {announcement.title}
+                            </h4>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded ${badge.bg} ${badge.text}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {announcement.content}
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-2">
+                            {new Date(announcement.published_at).toLocaleDateString("pt-BR", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* System Notifications Section */}
           <div className="legal-card p-6 mb-8 border-accent/20">

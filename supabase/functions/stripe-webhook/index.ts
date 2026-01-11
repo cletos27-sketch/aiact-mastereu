@@ -10,6 +10,9 @@ const logStep = (step: string, details?: unknown) => {
 // Product ID for Compliance Pack (PRODUCTION)
 const VALID_PRODUCT_ID = "prod_TlXNDRDgiLZ09U";
 
+// Valid statuses for purchases
+type PurchaseStatus = "active" | "canceled" | "payment_failed" | "pending";
+
 serve(async (req) => {
   try {
     logStep("Webhook received");
