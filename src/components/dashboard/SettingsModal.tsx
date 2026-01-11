@@ -64,7 +64,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         });
       }
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      if (import.meta.env.DEV) console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       toast.success("Perfil atualizado com sucesso!");
       onOpenChange(false);
     } catch (error) {
-      console.error("Error saving profile:", error);
+      if (import.meta.env.DEV) console.error("Error saving profile:", error);
       toast.error("Erro ao salvar perfil. Tente novamente.");
     } finally {
       setSaving(false);

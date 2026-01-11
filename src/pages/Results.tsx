@@ -385,14 +385,14 @@ const Results = () => {
           .insert(insertData as any);
 
         if (saveError) {
-          console.error("Error saving assessment:", saveError);
-          toast.error("Erro ao salvar avaliação. Verifique se está logado.");
+          if (import.meta.env.DEV) console.error("Error saving assessment:", saveError);
+          toast.error("Erro ao salvar avaliação. Tente novamente.");
         } else {
           hasSaved.current = true;
           toast.success("Avaliação salva com sucesso!");
         }
       } catch (error) {
-        console.error("Save error:", error);
+        if (import.meta.env.DEV) console.error("Save error:", error);
         toast.error("Erro ao salvar avaliação.");
       } finally {
         setIsSaving(false);
