@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Shield, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import SettingsModal from "@/components/dashboard/SettingsModal";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -54,6 +56,11 @@ const Header = () => {
     navigate("/");
   };
 
+  const handleOpenSettings = () => {
+    setIsOpen(false);
+    setSettingsOpen(true);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container-legal">
@@ -95,11 +102,9 @@ const Header = () => {
                 <Button variant="gold" size="sm" asChild>
                   <Link to="/dashboard">Meu Painel</Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/dashboard" className="flex items-center gap-1">
-                    <Settings className="w-4 h-4" />
-                    Configurações
-                  </Link>
+                <Button variant="ghost" size="sm" onClick={handleOpenSettings} className="flex items-center gap-1">
+                  <Settings className="w-4 h-4" />
+                  Configurações
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex items-center gap-1">
                   <LogOut className="w-4 h-4" />
@@ -144,11 +149,9 @@ const Header = () => {
                         Meu Painel
                       </Link>
                     </Button>
-                    <Button variant="outline" asChild>
-                      <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Configurações
-                      </Link>
+                    <Button variant="outline" onClick={handleOpenSettings} className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Configurações
                     </Button>
                     <Button variant="ghost" onClick={handleSignOut} className="flex items-center gap-2">
                       <LogOut className="w-4 h-4" />
@@ -174,6 +177,9 @@ const Header = () => {
           </Sheet>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   );
 };
