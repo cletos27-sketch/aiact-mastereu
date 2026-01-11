@@ -36,13 +36,13 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // First, check for active purchase
+    // First, check for active purchase (accept both "paid" and "active" for backward compatibility)
     const { data: activePurchases, error: activeError } = await supabaseClient
       .from("user_purchases")
       .select("*")
       .eq("user_id", user.id)
       .eq("product_id", VALID_PRODUCT_ID)
-      .eq("status", "paid")
+      .in("status", ["paid", "active"])
       .order("created_at", { ascending: false })
       .limit(1);
 

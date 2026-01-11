@@ -11,7 +11,12 @@ const logStep = (step: string, details?: unknown) => {
 const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 
 // Valid statuses for purchases
-type PurchaseStatus = "active" | "canceled" | "payment_failed" | "pending";
+// "paid" = successful one-time payment
+// "active" = active subscription (kept for backward compatibility)
+// "canceled" = canceled subscription
+// "payment_failed" = payment attempt failed
+// "pending" = awaiting payment
+type PurchaseStatus = "paid" | "active" | "canceled" | "payment_failed" | "pending";
 
 serve(async (req) => {
   try {
@@ -149,7 +154,7 @@ serve(async (req) => {
                 price_id: priceId,
                 amount: amount,
                 currency: currency,
-                status: "active",
+                status: "paid",
                 stripe_session_id: session.id,
                 stripe_customer_id: session.customer as string,
                 purchased_at: new Date().toISOString(),
@@ -173,7 +178,7 @@ serve(async (req) => {
                 price_id: priceId,
                 amount: amount,
                 currency: currency,
-                status: "active",
+                status: "paid",
                 stripe_session_id: session.id,
                 stripe_customer_id: session.customer as string,
                 purchased_at: new Date().toISOString(),

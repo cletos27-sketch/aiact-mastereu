@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
-export type PurchaseStatus = "active" | "canceled" | "payment_failed" | "pending" | null;
+// Status values: "paid" = successful payment, "active" = legacy/subscription, "canceled", "payment_failed", "pending"
+export type PurchaseStatus = "paid" | "active" | "canceled" | "payment_failed" | "pending" | null;
 
 // Product ID for Compliance Pack (TEST MODE)
 const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
@@ -57,7 +58,8 @@ export const usePurchaseStatus = () => {
           if (showToast) toast.error(`Erro ao verificar status: ${queryError.message}`);
         }
       } else if (data) {
-        const isActive = data.status === "active";
+        // Accept both "paid" and "active" as valid purchase statuses
+        const isActive = data.status === "paid" || data.status === "active";
         const wasInactive = !hasCompliancePack;
         
         setHasCompliancePack(isActive);
