@@ -11,8 +11,8 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CHECK-PURCHASE] ${step}${detailsStr}`);
 };
 
-// Both prices unlock the Compliance Pack (PRODUCTION)
-const VALID_PRODUCT_ID = "prod_TlXNDRDgiLZ09U";
+// Both prices unlock the Compliance Pack (TEST MODE)
+const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

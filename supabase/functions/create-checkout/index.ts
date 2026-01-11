@@ -12,10 +12,10 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
-// Valid price configurations (PRODUCTION)
+// Valid price configurations (TEST MODE)
 const VALID_PRICES = {
-  "price_1So0IyIV86RXPoUIiR2PXhM5": { mode: "payment", product_id: "prod_TlXNDRDgiLZ09U" },
-  "price_1So0IyIV86RXPoUIweuHHwNB": { mode: "subscription", product_id: "prod_TlXNDRDgiLZ09U" },
+  "price_1Snqs8IV86RXPoUIDO9x8pWp": { mode: "payment", product_id: "prod_TlNdrEbFfZcfIg" },
+  "price_1Snqs8IV86RXPoUIUHrXN5fI": { mode: "subscription", product_id: "prod_TlNdrEbFfZcfIg" },
 };
 
 serve(async (req) => {
@@ -41,7 +41,7 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Parse request body for price_id
-    let price_id = "price_1So0IyIV86RXPoUIiR2PXhM5"; // default to one-time payment (PRODUCTION)
+    let price_id = "price_1Snqs8IV86RXPoUIDO9x8pWp"; // default to one-time payment (TEST MODE)
     try {
       const body = await req.json();
       if (body.price_id && VALID_PRICES[body.price_id as keyof typeof VALID_PRICES]) {
