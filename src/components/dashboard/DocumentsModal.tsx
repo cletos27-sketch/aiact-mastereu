@@ -245,12 +245,22 @@ const documentTemplates: Record<DocumentType, { title: string; sections: string[
 
 const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
   const { user } = useAuth();
-  const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
+  const { hasCompliancePack, isPaymentFailed, loading: purchaseLoading } = usePurchaseStatus();
   const [assessments, setAssessments] = useState<RiskAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
 
   const handlePremiumDownload = (downloadFn: () => void) => {
+    if (isPaymentFailed) {
+      toast.error("Assinatura Pendente", {
+        description: "Por favor, atualize seus dados de pagamento para baixar documentos.",
+        action: {
+          label: "Atualizar Pagamento",
+          onClick: () => window.location.href = "/dashboard",
+        },
+      });
+      return;
+    }
     if (!hasCompliancePack) {
       toast.error("Conteúdo Premium", {
         description: "Este documento está disponível apenas para clientes do Compliance Pack.",

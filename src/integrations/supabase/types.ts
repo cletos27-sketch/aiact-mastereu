@@ -125,6 +125,45 @@ export type Database = {
         }
         Relationships: []
       }
+      system_announcements: {
+        Row: {
+          announcement_type: string
+          content: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          priority: number
+          published_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_type?: string
+          content: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          published_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_type?: string
+          content?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          published_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_updates: {
         Row: {
           content: string

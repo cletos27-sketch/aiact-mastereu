@@ -36,8 +36,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check if user has any paid purchase for the Compliance Pack product
-    const { data: purchases, error } = await supabaseClient
+    // First, check for active purchase
+    const { data: activePurchases, error: activeError } = await supabaseClient
       .from("user_purchases")
       .select("*")
       .eq("user_id", user.id)
@@ -46,22 +46,42 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (error) {
-      logStep("Error checking purchases", { error });
+    if (activeError) {
+      logStep("Error checking active purchases", { error: activeError });
       throw new Error("Failed to check purchase status");
     }
 
-    const hasCompliancePack = purchases && purchases.length > 0;
-    const purchase = hasCompliancePack ? purchases[0] : null;
+    // If no active purchase, check for payment_failed status
+    let purchase = activePurchases?.[0] || null;
+    let status = purchase ? "paid" : null;
+
+    if (!purchase) {
+      const { data: failedPurchases, error: failedError } = await supabaseClient
+        .from("user_purchases")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("product_id", VALID_PRODUCT_ID)
+        .eq("status", "payment_failed")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!failedError && failedPurchases && failedPurchases.length > 0) {
+        purchase = failedPurchases[0];
+        status = "payment_failed";
+      }
+    }
+
+    const hasCompliancePack = status === "paid";
     
     logStep("Purchase check complete", { 
       hasCompliancePack, 
-      purchaseCount: purchases?.length,
+      status,
       priceId: purchase?.price_id 
     });
 
     return new Response(JSON.stringify({ 
       hasCompliancePack,
+      status,
       purchase: purchase
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
