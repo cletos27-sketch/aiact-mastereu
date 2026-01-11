@@ -76,6 +76,7 @@ serve(async (req) => {
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
+      client_reference_id: user.id, // CRITICAL: Pass user ID for webhook lookup
       line_items: [
         {
           price: price_id,
