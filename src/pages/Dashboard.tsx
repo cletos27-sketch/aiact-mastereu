@@ -36,6 +36,7 @@ import {
   ShieldAlert,
   Users,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -115,6 +116,7 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
   const { hasCompliancePack, isPaymentFailed, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
+  const [isRefreshingAccess, setIsRefreshingAccess] = useState(false);
   const { 
     tasks, 
     initialLoading: tasksLoading, 
@@ -787,21 +789,42 @@ const Dashboard = () => {
                 Bem-vindo, {user.email}! Acompanhe seu progresso rumo à conformidade total.
               </p>
             </div>
-            {hasCompliancePack && (
+            <div className="flex flex-wrap gap-2">
+              {/* Refresh Access Button - always visible */}
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleOpenCustomerPortal}
-                disabled={isOpeningPortal}
+                onClick={async () => {
+                  setIsRefreshingAccess(true);
+                  await refreshPurchase();
+                  setIsRefreshingAccess(false);
+                }}
+                disabled={isRefreshingAccess || purchaseLoading}
               >
-                {isOpeningPortal ? (
+                {isRefreshingAccess ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <CreditCard className="w-4 h-4 mr-2" />
+                  <RefreshCw className="w-4 h-4 mr-2" />
                 )}
-                Gerir Assinatura / Faturação
+                Atualizar Acesso
               </Button>
-            )}
+              
+              {hasCompliancePack && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleOpenCustomerPortal}
+                  disabled={isOpeningPortal}
+                >
+                  {isOpeningPortal ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  Gerir Assinatura / Faturação
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Payment Failed Warning Banner */}
