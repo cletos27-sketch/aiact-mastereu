@@ -77,29 +77,39 @@ serve(async (req) => {
           paymentStatus: session.payment_status 
         });
 
-        // Get customer email from session
+        // Get user ID from client_reference_id (preferred) or find by email
+        const clientReferenceId = session.client_reference_id;
         const customerEmail = session.customer_email || session.customer_details?.email;
-        if (!customerEmail) {
-          logStep("No customer email found in session, skipping");
+        
+        logStep("Session identifiers", { clientReferenceId, customerEmail });
+
+        let userId: string | null = null;
+
+        // Priority 1: Use client_reference_id (most reliable)
+        if (clientReferenceId) {
+          userId = clientReferenceId;
+          logStep("Using client_reference_id as user_id", { userId });
+        } 
+        // Priority 2: Find user by email
+        else if (customerEmail) {
+          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+          if (userError) {
+            logStep("Error listing users", { error: userError.message });
+            break;
+          }
+          const user = userData.users.find(u => u.email === customerEmail);
+          if (user) {
+            userId = user.id;
+            logStep("Found user by email", { userId, email: customerEmail });
+          }
+        }
+
+        if (!userId) {
+          logStep("No user found - missing client_reference_id and email lookup failed");
           break;
         }
 
-        logStep("Found customer email", { email: customerEmail });
-
-        // Find user by email
-        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-        if (userError) {
-          logStep("Error listing users", { error: userError.message });
-          break;
-        }
-
-        const user = userData.users.find(u => u.email === customerEmail);
-        if (!user) {
-          logStep("No user found with email", { email: customerEmail });
-          break;
-        }
-
-        logStep("Found user", { userId: user.id });
+        logStep("Processing for user", { userId });
 
         // Only process if payment was successful
         if (session.payment_status === "paid") {
@@ -122,8 +132,8 @@ serve(async (req) => {
           const { error: upsertError } = await supabaseAdmin
             .from("user_purchases")
             .upsert({
-              user_id: user.id,
-              user_email: customerEmail,
+              user_id: userId,
+              user_email: customerEmail || "",
               product_id: productId,
               price_id: priceId,
               amount: amount,
@@ -140,19 +150,19 @@ serve(async (req) => {
           if (upsertError) {
             logStep("Error upserting purchase", { error: upsertError.message });
           } else {
-            logStep("Purchase recorded successfully", { userId: user.id, productId });
+            logStep("Purchase recorded successfully", { userId, productId });
           }
 
           // Also update profiles.is_paid to true
           const { error: profileError } = await supabaseAdmin
             .from("profiles")
             .update({ is_paid: true, updated_at: new Date().toISOString() })
-            .eq("user_id", user.id);
+            .eq("user_id", userId);
 
           if (profileError) {
             logStep("Error updating profile is_paid", { error: profileError.message });
           } else {
-            logStep("Profile is_paid updated to true", { userId: user.id });
+            logStep("Profile is_paid updated to true", { userId });
           }
         } else {
           logStep("Payment not completed yet", { paymentStatus: session.payment_status });
