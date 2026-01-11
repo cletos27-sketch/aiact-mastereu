@@ -2,12 +2,14 @@ import { useState, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Shield } from "lucide-react";
+import { Menu, Shield, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navigation = [
     { name: "Início", href: "/", isHash: false },
@@ -17,17 +19,15 @@ const Header = () => {
   ];
 
   const handleNavigation = useCallback((item: typeof navigation[0]) => {
-    setIsOpen(false); // Always close mobile menu
+    setIsOpen(false);
     
     if (item.isHash && item.hash) {
-      // If we're already on the home page, just scroll to the section
       if (location.pathname === "/") {
         const element = document.getElementById(item.hash);
         if (element) {
           element.scrollIntoView({ behavior: "smooth" });
         }
       } else {
-        // Navigate to home first, then scroll after a short delay
         navigate("/");
         setTimeout(() => {
           const element = document.getElementById(item.hash);
@@ -46,6 +46,12 @@ const Header = () => {
       return location.pathname === "/" && location.hash === `#${item.hash}`;
     }
     return location.pathname === item.href;
+  };
+
+  const handleSignOut = async () => {
+    setIsOpen(false);
+    await signOut();
+    navigate("/");
   };
 
   return (
@@ -82,14 +88,34 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/login">Entrar</Link>
-            </Button>
-            <Button variant="gold" size="sm" asChild>
-              <Link to="/assessment">Diagnóstico Gratuito</Link>
-            </Button>
+          {/* Desktop CTA - Conditional based on auth state */}
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <>
+                <Button variant="gold" size="sm" asChild>
+                  <Link to="/dashboard">Meu Painel</Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/dashboard" className="flex items-center gap-1">
+                    <Settings className="w-4 h-4" />
+                    Configurações
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex items-center gap-1">
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">Entrar</Link>
+                </Button>
+                <Button variant="gold" size="sm" asChild>
+                  <Link to="/assessment">Diagnóstico Gratuito</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -111,16 +137,38 @@ const Header = () => {
                   </button>
                 ))}
                 <hr className="border-border" />
-                <Button variant="outline" asChild>
-                  <Link to="/login" onClick={() => setIsOpen(false)}>
-                    Entrar
-                  </Link>
-                </Button>
-                <Button variant="gold" asChild>
-                  <Link to="/assessment" onClick={() => setIsOpen(false)}>
-                    Diagnóstico Gratuito
-                  </Link>
-                </Button>
+                {user ? (
+                  <>
+                    <Button variant="gold" asChild>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        Meu Painel
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Configurações
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" onClick={handleSignOut} className="flex items-center gap-2">
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" asChild>
+                      <Link to="/login" onClick={() => setIsOpen(false)}>
+                        Entrar
+                      </Link>
+                    </Button>
+                    <Button variant="gold" asChild>
+                      <Link to="/assessment" onClick={() => setIsOpen(false)}>
+                        Diagnóstico Gratuito
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>
