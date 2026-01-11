@@ -7,8 +7,8 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Product ID for Compliance Pack (PRODUCTION)
-const VALID_PRODUCT_ID = "prod_TlXNDRDgiLZ09U";
+// Product ID for Compliance Pack (TEST MODE)
+const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 
 // Valid statuses for purchases
 type PurchaseStatus = "active" | "canceled" | "payment_failed" | "pending";

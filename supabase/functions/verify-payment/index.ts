@@ -65,7 +65,7 @@ serve(async (req) => {
       const lineItem = session.line_items?.data[0];
       const price = lineItem?.price;
       const priceId = price?.id || session.metadata?.price_id || "unknown";
-      const productId = typeof price?.product === "string" ? price.product : "prod_TlNdrEbFfZcfIg";
+      const productId = typeof price?.product === "string" ? price.product : "prod_TlNdrEbFfZcfIg"; // TEST MODE product
       const amount = session.amount_total || 0;
       const currency = session.currency || "eur";
 
