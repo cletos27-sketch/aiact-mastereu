@@ -67,8 +67,99 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Handle subscription events
+    // Handle Stripe events
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        logStep("Processing checkout.session.completed", { 
+          sessionId: session.id,
+          mode: session.mode,
+          paymentStatus: session.payment_status 
+        });
+
+        // Get customer email from session
+        const customerEmail = session.customer_email || session.customer_details?.email;
+        if (!customerEmail) {
+          logStep("No customer email found in session, skipping");
+          break;
+        }
+
+        logStep("Found customer email", { email: customerEmail });
+
+        // Find user by email
+        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+        if (userError) {
+          logStep("Error listing users", { error: userError.message });
+          break;
+        }
+
+        const user = userData.users.find(u => u.email === customerEmail);
+        if (!user) {
+          logStep("No user found with email", { email: customerEmail });
+          break;
+        }
+
+        logStep("Found user", { userId: user.id });
+
+        // Only process if payment was successful
+        if (session.payment_status === "paid") {
+          // Get line item details
+          const stripe = new Stripe(stripeKey!, { apiVersion: "2025-08-27.basil" });
+          const sessionWithItems = await stripe.checkout.sessions.retrieve(session.id, {
+            expand: ["line_items.data.price.product"]
+          });
+          
+          const lineItem = sessionWithItems.line_items?.data[0];
+          const price = lineItem?.price;
+          const priceId = price?.id || "unknown";
+          const productId = typeof price?.product === "string" ? price.product : VALID_PRODUCT_ID;
+          const amount = session.amount_total || 0;
+          const currency = session.currency || "eur";
+
+          logStep("Purchase details", { priceId, productId, amount, currency });
+
+          // Upsert purchase record
+          const { error: upsertError } = await supabaseAdmin
+            .from("user_purchases")
+            .upsert({
+              user_id: user.id,
+              user_email: customerEmail,
+              product_id: productId,
+              price_id: priceId,
+              amount: amount,
+              currency: currency,
+              status: "active",
+              stripe_session_id: session.id,
+              stripe_customer_id: session.customer as string,
+              purchased_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: "user_id,product_id"
+            });
+
+          if (upsertError) {
+            logStep("Error upserting purchase", { error: upsertError.message });
+          } else {
+            logStep("Purchase recorded successfully", { userId: user.id, productId });
+          }
+
+          // Also update profiles.is_paid to true
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .update({ is_paid: true, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+
+          if (profileError) {
+            logStep("Error updating profile is_paid", { error: profileError.message });
+          } else {
+            logStep("Profile is_paid updated to true", { userId: user.id });
+          }
+        } else {
+          logStep("Payment not completed yet", { paymentStatus: session.payment_status });
+        }
+        break;
+      }
+
       case "customer.subscription.deleted":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
