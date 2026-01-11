@@ -30,22 +30,33 @@ serve(async (req) => {
 
     let event: Stripe.Event;
 
-    // Verify webhook signature if secret is configured
-    if (webhookSecret && signature) {
-      try {
-        event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-        logStep("Webhook signature verified");
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        logStep("Webhook signature verification failed", { error: message });
-        return new Response(JSON.stringify({ error: `Webhook signature verification failed: ${message}` }), {
-          status: 400,
-        });
-      }
-    } else {
-      // Parse event without verification (for development)
-      event = JSON.parse(body);
-      logStep("Webhook parsed without signature verification (development mode)");
+    // SECURITY: Webhook signature verification is REQUIRED
+    if (!webhookSecret) {
+      logStep("ERROR: STRIPE_WEBHOOK_SECRET is not configured");
+      return new Response(
+        JSON.stringify({ error: "Webhook signature verification required - STRIPE_WEBHOOK_SECRET not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!signature) {
+      logStep("ERROR: Missing stripe-signature header");
+      return new Response(
+        JSON.stringify({ error: "Webhook signature verification required - missing signature header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
+      logStep("Webhook signature verified successfully");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logStep("Webhook signature verification failed", { error: message });
+      return new Response(
+        JSON.stringify({ error: `Webhook signature verification failed: ${message}` }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     logStep("Processing event", { type: event.type, id: event.id });
