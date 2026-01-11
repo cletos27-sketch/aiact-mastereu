@@ -128,29 +128,62 @@ serve(async (req) => {
 
           logStep("Purchase details", { priceId, productId, amount, currency });
 
-          // Upsert purchase record
-          const { error: upsertError } = await supabaseAdmin
+          // First check if purchase record already exists
+          const { data: existingPurchase, error: checkError } = await supabaseAdmin
             .from("user_purchases")
-            .upsert({
-              user_id: userId,
-              user_email: customerEmail || "",
-              product_id: productId,
-              price_id: priceId,
-              amount: amount,
-              currency: currency,
-              status: "active",
-              stripe_session_id: session.id,
-              stripe_customer_id: session.customer as string,
-              purchased_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: "user_id,product_id"
-            });
+            .select("id")
+            .eq("user_id", userId)
+            .eq("product_id", productId)
+            .maybeSingle();
 
-          if (upsertError) {
-            logStep("Error upserting purchase", { error: upsertError.message });
+          if (checkError) {
+            logStep("Error checking existing purchase", { error: checkError.message });
+          }
+
+          if (existingPurchase) {
+            // Update existing record
+            const { error: updateError } = await supabaseAdmin
+              .from("user_purchases")
+              .update({
+                user_email: customerEmail || "",
+                price_id: priceId,
+                amount: amount,
+                currency: currency,
+                status: "active",
+                stripe_session_id: session.id,
+                stripe_customer_id: session.customer as string,
+                purchased_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existingPurchase.id);
+
+            if (updateError) {
+              logStep("Error updating purchase", { error: updateError.message });
+            } else {
+              logStep("Purchase updated successfully", { userId, productId });
+            }
           } else {
-            logStep("Purchase recorded successfully", { userId, productId });
+            // Insert new record
+            const { error: insertError } = await supabaseAdmin
+              .from("user_purchases")
+              .insert({
+                user_id: userId,
+                user_email: customerEmail || "",
+                product_id: productId,
+                price_id: priceId,
+                amount: amount,
+                currency: currency,
+                status: "active",
+                stripe_session_id: session.id,
+                stripe_customer_id: session.customer as string,
+                purchased_at: new Date().toISOString(),
+              });
+
+            if (insertError) {
+              logStep("Error inserting purchase", { error: insertError.message });
+            } else {
+              logStep("Purchase inserted successfully", { userId, productId });
+            }
           }
 
           // Also update profiles.is_paid to true

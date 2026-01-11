@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -141,11 +141,37 @@ const questions: Question[] = [
 
 type RiskClassification = "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO";
 
+const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
+
 const Assessment = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
+
+  // Restore answers from localStorage if user refreshed or came back
+  useEffect(() => {
+    const savedAnswers = sessionStorage.getItem("assessment_progress");
+    if (savedAnswers) {
+      try {
+        const parsed = JSON.parse(savedAnswers);
+        setAnswers(parsed.answers || {});
+        setCurrentStep(parsed.currentStep || 0);
+      } catch (e) {
+        console.error("Error restoring assessment progress:", e);
+      }
+    }
+  }, []);
+
+  // Save progress to sessionStorage
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) {
+      sessionStorage.setItem("assessment_progress", JSON.stringify({
+        answers,
+        currentStep
+      }));
+    }
+  }, [answers, currentStep]);
 
   const progress = ((currentStep + 1) / questions.length) * 100;
   const currentQuestion = questions[currentStep];
@@ -227,14 +253,24 @@ const Assessment = () => {
         percentage: result.score,
       };
 
+      // Save assessment data to localStorage for users not logged in
+      // This will be persisted to DB when they login/signup
+      const assessmentData = {
+        answers, 
+        riskScore, 
+        questionsData,
+        riskClassification: result.classification,
+        triggeredQuestions: result.triggeredQuestions,
+        timestamp: new Date().toISOString(),
+      };
+      
+      localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(assessmentData));
+      
+      // Clear session storage progress since assessment is complete
+      sessionStorage.removeItem("assessment_progress");
+
       navigate("/results", { 
-        state: { 
-          answers, 
-          riskScore, 
-          questionsData,
-          riskClassification: result.classification,
-          triggeredQuestions: result.triggeredQuestions,
-        } 
+        state: assessmentData
       });
     }
   };
