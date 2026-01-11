@@ -10,6 +10,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ];
 
+// Pattern to match Lovable project preview URLs
+const LOVABLE_PREVIEW_PATTERN = /^https:\/\/[a-f0-9-]+\.lovableproject\.com$/;
+
 /**
  * Get CORS headers with origin validation
  * Only allows requests from whitelisted origins
@@ -17,10 +20,9 @@ const ALLOWED_ORIGINS = [
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
   
-  // Check if origin is in allowed list
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) 
-    ? origin 
-    : ALLOWED_ORIGINS[0]; // Default to primary production URL
+  // Check if origin is in allowed list OR matches Lovable preview pattern
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || LOVABLE_PREVIEW_PATTERN.test(origin);
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
   
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
