@@ -24,20 +24,35 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
     logStep("Function started");
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+    const email = (claimsData.claims.email as string | undefined) ?? null;
+    if (!email) throw new Error("User not authenticated or email not available");
+
+    logStep("User authenticated", { userId });
 
     // Parse request body for price_id
     let price_id = "price_1Snqs8IV86RXPoUIDO9x8pWp"; // default to one-time payment (TEST MODE)
@@ -55,14 +70,16 @@ serve(async (req) => {
       throw new Error("Invalid price_id provided");
     }
 
-    logStep("Price selected", { price_id, mode: priceConfig.mode });
+    const plan_type = priceConfig.mode === "subscription" ? "monthly" : "premium";
+
+    logStep("Price selected", { price_id, mode: priceConfig.mode, plan_type });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
     // Check if a Stripe customer record exists for this user
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
@@ -70,12 +87,12 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "https://dysoidrqyndwvadiwcrq.lovable.app";
-    
+
     // Create checkout session with appropriate mode
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      client_reference_id: user.id, // CRITICAL: Pass user ID for webhook lookup
+      customer_email: customerId ? undefined : email,
+      client_reference_id: userId, // CRITICAL: Pass user ID for webhook lookup
       line_items: [
         {
           price: price_id,
@@ -86,9 +103,10 @@ serve(async (req) => {
       success_url: `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard`,
       metadata: {
-        user_id: user.id,
-        user_email: user.email,
+        user_id: userId,
+        user_email: email,
         price_id: price_id,
+        plan_type,
       },
     };
 
@@ -103,9 +121,10 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in create-checkout", { message: errorMessage });
+    const status = errorMessage === "Unauthorized" ? 401 : 500;
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status,
     });
   }
 });

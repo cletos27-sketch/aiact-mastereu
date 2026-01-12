@@ -49,14 +49,27 @@ const PricingCards = ({ hasCompliancePack }: PricingCardsProps) => {
 
   const handleCheckout = async (priceId: string) => {
     setLoadingPriceId(priceId);
+
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        toast.info("Faça login para continuar com a compra");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { price_id: priceId },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
+
       if (error) throw error;
+
       if (data?.url) {
-        // Use window.location.href to avoid popup blockers
-        window.location.href = data.url;
+        window.location.assign(data.url);
       }
     } catch (error) {
       console.error("Checkout error:", error);
