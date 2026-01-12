@@ -73,8 +73,19 @@ const PricingSection = () => {
     setLoadingPriceId(priceId);
     
     try {
+      // Get the current session to pass auth token
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        navigate("/login");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { price_id: priceId },
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
       });
 
       if (error) {
