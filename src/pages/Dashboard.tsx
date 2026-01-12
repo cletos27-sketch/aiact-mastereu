@@ -115,7 +115,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
-  const { hasCompliancePack, isPaymentFailed, loading: purchaseLoading, refresh: refreshPurchase } = usePurchaseStatus();
+  const { 
+    hasCompliancePack, 
+    isPaymentFailed, 
+    isCanceled,
+    isSubscriptionEnded,
+    loading: purchaseLoading, 
+    refresh: refreshPurchase 
+  } = usePurchaseStatus();
   const [isRefreshingAccess, setIsRefreshingAccess] = useState(false);
   const { 
     tasks, 
@@ -161,6 +168,10 @@ const Dashboard = () => {
   };
 
   const handleDownloadLiteracyGuide = async () => {
+    if (isSubscriptionEnded || isCanceled) {
+      toast.error("⚠️ Assinatura Encerrada: Seu acesso aos documentos foi bloqueado.");
+      return;
+    }
     if (isPaymentFailed) {
       toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
       return;
@@ -196,6 +207,10 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
+    if (isSubscriptionEnded || isCanceled) {
+      toast.error("⚠️ Assinatura Encerrada: Seu acesso aos documentos foi bloqueado.");
+      return;
+    }
     if (isPaymentFailed) {
       toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
       return;
@@ -826,6 +841,34 @@ const Dashboard = () => {
               )}
             </div>
           </div>
+
+          {/* Subscription Ended Warning Banner - IMPLACABLE */}
+          {isSubscriptionEnded && !isPaymentFailed && (
+            <div className="legal-card p-6 mb-8 border-red-600/70 bg-red-600/15">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-red-600/30 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="font-display text-lg font-semibold text-red-600 mb-1">
+                    🔒 Assinatura Encerrada
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sua assinatura foi cancelada ou expirou. <strong>Todo o acesso aos documentos está bloqueado.</strong>
+                    Para voltar a ter acesso, adquira novamente o Dossiê de Conformidade.
+                  </p>
+                </div>
+                <Button 
+                  variant="default"
+                  onClick={() => {
+                    document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  Ver Planos
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Payment Failed Warning Banner */}
           {isPaymentFailed && (
