@@ -54,8 +54,14 @@ const HeroSection = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
-            <Button variant="heroOutline" size="xl" asChild>
-              <Link to="/#pricing">Ver Planos</Link>
+            <Button 
+              variant="heroOutline" 
+              size="xl" 
+              onClick={() => {
+                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Ver Planos
             </Button>
           </div>
 
