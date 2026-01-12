@@ -1,6 +1,16 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Crown, Zap } from "lucide-react";
+import { Check, Crown, Zap, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+// Price IDs for TEST MODE - must match create-checkout
+const PRICE_IDS = {
+  oneTime: "price_1Snqs8IV86RXPoUIDO9x8pWp",
+  subscription: "price_1Snqs8IV86RXPoUIUHrXN5fI",
+};
 
 const plans = [
   {
@@ -22,6 +32,7 @@ const plans = [
     popular: false,
     icon: Zap,
     cta: "Começar Agora",
+    priceId: PRICE_IDS.oneTime,
   },
   {
     name: "Monitoramento",
@@ -42,10 +53,50 @@ const plans = [
     popular: true,
     icon: Crown,
     cta: "Assinar Plano",
+    priceId: PRICE_IDS.subscription,
   },
 ];
 
 const PricingSection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+
+  const handleCheckout = async (priceId: string) => {
+    // If user is not logged in, redirect to login
+    if (!user) {
+      toast.info("Faça login para continuar com a compra");
+      navigate("/login");
+      return;
+    }
+
+    setLoadingPriceId(priceId);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { price_id: priceId },
+      });
+
+      if (error) {
+        console.error("Checkout error:", error);
+        toast.error("Erro ao iniciar checkout. Tente novamente.");
+        return;
+      }
+
+      if (data?.url) {
+        // Open checkout in same tab for better UX
+        window.location.href = data.url;
+      } else {
+        toast.error("Erro: URL de checkout não recebida");
+      }
+    } catch (err) {
+      console.error("Checkout exception:", err);
+      toast.error("Erro ao conectar com o serviço de pagamento");
+    } finally {
+      setLoadingPriceId(null);
+    }
+  };
+
   return (
     <section className="section-padding bg-background" id="pricing">
       <div className="container-legal">
@@ -68,6 +119,8 @@ const PricingSection = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {plans.map((plan) => {
             const Icon = plan.icon;
+            const isLoading = loadingPriceId === plan.priceId;
+            
             return (
               <div
                 key={plan.name}
@@ -116,14 +169,22 @@ const PricingSection = () => {
                   ))}
                 </ul>
 
-                {/* CTA */}
+                {/* CTA - Checkout Button */}
                 <Button
                   variant={plan.popular ? "gold" : "default"}
                   size="lg"
                   className="w-full"
-                  asChild
+                  onClick={() => handleCheckout(plan.priceId)}
+                  disabled={isLoading}
                 >
-                  <Link to="/assessment">{plan.cta}</Link>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    plan.cta
+                  )}
                 </Button>
               </div>
             );
