@@ -860,8 +860,19 @@ const Dashboard = () => {
                 </div>
                 <Button 
                   variant="default"
-                  onClick={() => {
-                    document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke("create-checkout");
+                      if (error) {
+                        toast.error("Erro ao iniciar checkout. Tente novamente.");
+                        return;
+                      }
+                      if (data?.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (err) {
+                      toast.error("Erro ao processar. Tente novamente.");
+                    }
                   }}
                 >
                   Ver Planos
