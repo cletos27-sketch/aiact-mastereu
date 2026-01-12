@@ -122,7 +122,6 @@ serve(async (req) => {
 
         // Only process if payment was successful
         if (session.payment_status === "paid") {
-          // Explicit insert as requested (TEST MODE IDs)
           const productId = VALID_PRODUCT_ID;
           const priceId = "price_1Snqs8IV86RXPoUIUHrXN5fI";
           const amount = 4900;
@@ -130,7 +129,7 @@ serve(async (req) => {
           const status: PurchaseStatus = "paid";
           const userEmail = session.customer_details?.email || session.customer_email || "";
 
-          logStep("Inserting paid purchase", {
+          logStep("Upserting paid purchase", {
             userId,
             userEmail,
             productId,
@@ -140,21 +139,11 @@ serve(async (req) => {
             stripeSessionId: session.id,
           });
 
-          // Prevent accidental duplicates for the same Stripe session
-          const { data: existingBySession, error: existingBySessionError } = await supabaseAdmin
+          // UPSERT: Insert or update based on user_id + product_id
+          const { error: upsertError } = await supabaseAdmin
             .from("user_purchases")
-            .select("id")
-            .eq("stripe_session_id", session.id)
-            .maybeSingle();
-
-          if (existingBySessionError) {
-            logStep("Error checking existing purchase by stripe_session_id", { error: existingBySessionError.message });
-          }
-
-          if (!existingBySession) {
-            const { error: insertError } = await supabaseAdmin
-              .from("user_purchases")
-              .insert({
+            .upsert(
+              {
                 user_id: userId,
                 user_email: userEmail,
                 product_id: productId,
@@ -165,25 +154,28 @@ serve(async (req) => {
                 purchased_at: new Date().toISOString(),
                 stripe_session_id: session.id,
                 stripe_customer_id: (session.customer as string) || null,
-              });
+                updated_at: new Date().toISOString(),
+              },
+              { 
+                onConflict: "user_id,product_id",
+                ignoreDuplicates: false 
+              }
+            );
 
-            if (insertError) {
-              logStep("Error inserting purchase", { error: insertError.message });
-            } else {
-              logStep("Purchase inserted successfully", { userId, productId, priceId });
-            }
+          if (upsertError) {
+            logStep("Error upserting purchase", { error: upsertError.message });
           } else {
-            logStep("Purchase already exists for stripe_session_id - skipping insert", { existingId: existingBySession.id });
+            logStep("Purchase upserted successfully", { userId, productId, status });
           }
 
-          // Update profiles.is_paid to true for the same user_id
+          // Update profiles.is_paid to true
           const { error: profileError } = await supabaseAdmin
             .from("profiles")
             .update({ is_paid: true, updated_at: new Date().toISOString() })
             .eq("user_id", userId);
 
           if (profileError) {
-            logStep("Error updating profile is_paid", { error: profileError.message });
+            logStep("Error updating profile is_paid to true", { error: profileError.message });
           } else {
             logStep("Profile is_paid updated to true", { userId });
           }
@@ -236,29 +228,54 @@ serve(async (req) => {
 
         // Check subscription status
         const isActive = subscription.status === "active" || subscription.status === "trialing";
-        const isCanceled = subscription.status === "canceled" || 
-                          subscription.cancel_at_period_end === true;
+        const isCanceled = subscription.status === "canceled" || event.type === "customer.subscription.deleted";
 
-        if (event.type === "customer.subscription.deleted" || 
-            (event.type === "customer.subscription.updated" && !isActive)) {
-          
-          // Update purchase status to canceled
-          const { error: updateError } = await supabaseAdmin
+        if (isCanceled || !isActive) {
+          logStep("Processing cancellation/inactive subscription", { 
+            userId: user.id, 
+            subscriptionStatus: subscription.status,
+            eventType: event.type 
+          });
+
+          // UPSERT: Update status to canceled
+          const { error: upsertError } = await supabaseAdmin
             .from("user_purchases")
-            .update({ 
-              status: "canceled",
-              updated_at: new Date().toISOString()
-            })
-            .eq("user_id", user.id)
-            .eq("product_id", VALID_PRODUCT_ID);
+            .upsert(
+              {
+                user_id: user.id,
+                user_email: customerEmail,
+                product_id: VALID_PRODUCT_ID,
+                price_id: "price_1Snqs8IV86RXPoUIUHrXN5fI",
+                amount: 4900,
+                currency: "eur",
+                status: "canceled" as PurchaseStatus,
+                updated_at: new Date().toISOString(),
+                stripe_customer_id: customerId,
+              },
+              { 
+                onConflict: "user_id,product_id",
+                ignoreDuplicates: false 
+              }
+            );
 
-          if (updateError) {
-            logStep("Error updating purchase status", { error: updateError.message });
+          if (upsertError) {
+            logStep("Error upserting canceled purchase", { error: upsertError.message });
           } else {
-            logStep("Purchase status updated to canceled", { userId: user.id });
+            logStep("Purchase status upserted to canceled", { userId: user.id });
           }
-        } else if (isCanceled) {
-          // Subscription will be canceled at end of period
+
+          // Update profiles.is_paid to false
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .update({ is_paid: false, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+
+          if (profileError) {
+            logStep("Error updating profile is_paid to false", { error: profileError.message });
+          } else {
+            logStep("Profile is_paid updated to false", { userId: user.id });
+          }
+        } else if (subscription.cancel_at_period_end) {
           logStep("Subscription marked for cancellation at period end", { 
             userId: user.id,
             cancelAt: subscription.cancel_at 
