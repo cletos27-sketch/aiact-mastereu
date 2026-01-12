@@ -82,27 +82,31 @@ serve(async (req) => {
           paymentStatus: session.payment_status 
         });
 
-        // Get user ID from client_reference_id (preferred) or find by email
+        // Identify the user reliably
+        // Priority 1: session.metadata.user_id (explicit)
+        // Priority 2: client_reference_id
+        // Priority 3: find user by email (fallback)
+        const metadataUserId = session.metadata?.user_id;
         const clientReferenceId = session.client_reference_id;
         const customerEmail = session.customer_email || session.customer_details?.email;
-        
-        logStep("Session identifiers", { clientReferenceId, customerEmail });
+
+        logStep("Session identifiers", { metadataUserId, clientReferenceId, customerEmail });
 
         let userId: string | null = null;
 
-        // Priority 1: Use client_reference_id (most reliable)
-        if (clientReferenceId) {
+        if (metadataUserId) {
+          userId = metadataUserId;
+          logStep("Using session.metadata.user_id as user_id", { userId });
+        } else if (clientReferenceId) {
           userId = clientReferenceId;
           logStep("Using client_reference_id as user_id", { userId });
-        } 
-        // Priority 2: Find user by email
-        else if (customerEmail) {
+        } else if (customerEmail) {
           const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
           if (userError) {
             logStep("Error listing users", { error: userError.message });
             break;
           }
-          const user = userData.users.find(u => u.email === customerEmail);
+          const user = userData.users.find((u) => u.email === customerEmail);
           if (user) {
             userId = user.id;
             logStep("Found user by email", { userId, email: customerEmail });
@@ -110,7 +114,7 @@ serve(async (req) => {
         }
 
         if (!userId) {
-          logStep("No user found - missing client_reference_id and email lookup failed");
+          logStep("No user found - missing metadata.user_id and client_reference_id and email lookup failed");
           break;
         }
 
@@ -118,80 +122,61 @@ serve(async (req) => {
 
         // Only process if payment was successful
         if (session.payment_status === "paid") {
-          // Get line item details
-          const stripe = new Stripe(stripeKey!, { apiVersion: "2025-08-27.basil" });
-          const sessionWithItems = await stripe.checkout.sessions.retrieve(session.id, {
-            expand: ["line_items.data.price.product"]
+          // Explicit insert as requested (TEST MODE IDs)
+          const productId = VALID_PRODUCT_ID;
+          const priceId = "price_1Snqs8IV86RXPoUIUHrXN5fI";
+          const amount = 4900;
+          const currency = "eur";
+          const status: PurchaseStatus = "paid";
+          const userEmail = session.customer_details?.email || session.customer_email || "";
+
+          logStep("Inserting paid purchase", {
+            userId,
+            userEmail,
+            productId,
+            priceId,
+            amount,
+            currency,
+            stripeSessionId: session.id,
           });
-          
-          const lineItem = sessionWithItems.line_items?.data[0];
-          const price = lineItem?.price;
-          const priceId = price?.id || "unknown";
-          const productId = typeof price?.product === "string" ? price.product : VALID_PRODUCT_ID;
-          const amount = session.amount_total || 0;
-          const currency = session.currency || "eur";
 
-          logStep("Purchase details", { priceId, productId, amount, currency });
-
-          // First check if purchase record already exists
-          const { data: existingPurchase, error: checkError } = await supabaseAdmin
+          // Prevent accidental duplicates for the same Stripe session
+          const { data: existingBySession, error: existingBySessionError } = await supabaseAdmin
             .from("user_purchases")
             .select("id")
-            .eq("user_id", userId)
-            .eq("product_id", productId)
+            .eq("stripe_session_id", session.id)
             .maybeSingle();
 
-          if (checkError) {
-            logStep("Error checking existing purchase", { error: checkError.message });
+          if (existingBySessionError) {
+            logStep("Error checking existing purchase by stripe_session_id", { error: existingBySessionError.message });
           }
 
-          if (existingPurchase) {
-            // Update existing record
-            const { error: updateError } = await supabaseAdmin
-              .from("user_purchases")
-              .update({
-                user_email: customerEmail || "",
-                price_id: priceId,
-                amount: amount,
-                currency: currency,
-                status: "paid",
-                stripe_session_id: session.id,
-                stripe_customer_id: session.customer as string,
-                purchased_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", existingPurchase.id);
-
-            if (updateError) {
-              logStep("Error updating purchase", { error: updateError.message });
-            } else {
-              logStep("Purchase updated successfully", { userId, productId });
-            }
-          } else {
-            // Insert new record
+          if (!existingBySession) {
             const { error: insertError } = await supabaseAdmin
               .from("user_purchases")
               .insert({
                 user_id: userId,
-                user_email: customerEmail || "",
+                user_email: userEmail,
                 product_id: productId,
                 price_id: priceId,
-                amount: amount,
-                currency: currency,
-                status: "paid",
-                stripe_session_id: session.id,
-                stripe_customer_id: session.customer as string,
+                amount,
+                currency,
+                status,
                 purchased_at: new Date().toISOString(),
+                stripe_session_id: session.id,
+                stripe_customer_id: (session.customer as string) || null,
               });
 
             if (insertError) {
               logStep("Error inserting purchase", { error: insertError.message });
             } else {
-              logStep("Purchase inserted successfully", { userId, productId });
+              logStep("Purchase inserted successfully", { userId, productId, priceId });
             }
+          } else {
+            logStep("Purchase already exists for stripe_session_id - skipping insert", { existingId: existingBySession.id });
           }
 
-          // Also update profiles.is_paid to true
+          // Update profiles.is_paid to true for the same user_id
           const { error: profileError } = await supabaseAdmin
             .from("profiles")
             .update({ is_paid: true, updated_at: new Date().toISOString() })
