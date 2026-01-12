@@ -145,7 +145,7 @@ export const usePurchaseStatus = () => {
     }
   }, []);
 
-  // Real-time subscription to BOTH user_purchases AND profiles changes
+  // Simplified real-time subscription with error handling
   useEffect(() => {
     if (authLoading || !user) {
       setIsRealtimeConnected(false);
@@ -153,71 +153,75 @@ export const usePurchaseStatus = () => {
       return;
     }
 
-    let purchasesChannel: ReturnType<typeof supabase.channel> | null = null;
-    let profilesChannel: ReturnType<typeof supabase.channel> | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let connectionAttempted = false;
 
-    try {
-      // Channel 1: Listen to user_purchases changes
-      purchasesChannel = supabase
-        .channel(`user_purchases_${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "user_purchases",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            console.log("[usePurchaseStatus] user_purchases changed:", payload);
-            checkPurchaseStatus(true);
-          }
-        )
-        .subscribe((status, err) => {
-          if (status === "SUBSCRIBED") {
-            console.log("[usePurchaseStatus] Realtime connected for user_purchases");
-            setIsRealtimeConnected(true);
-            stopPolling();
-          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.error("[usePurchaseStatus] Realtime error for user_purchases:", err);
-            setIsRealtimeConnected(false);
-            startPolling();
-          }
-        });
+    const setupRealtime = () => {
+      try {
+        channel = supabase
+          .channel(`purchase_status_${user.id}_${Date.now()}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "user_purchases",
+            },
+            (payload) => {
+              // Filter manually to avoid binding issues
+              if (payload.new && (payload.new as { user_id?: string }).user_id === user.id) {
+                console.log("[usePurchaseStatus] user_purchases changed:", payload);
+                checkPurchaseStatus(true);
+              }
+            }
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "profiles",
+            },
+            (payload) => {
+              // Filter manually to avoid binding issues
+              if (payload.new && (payload.new as { user_id?: string }).user_id === user.id) {
+                console.log("[usePurchaseStatus] profiles changed:", payload);
+                checkPurchaseStatus(true);
+              }
+            }
+          )
+          .subscribe((status, err) => {
+            connectionAttempted = true;
+            if (status === "SUBSCRIBED") {
+              console.log("[usePurchaseStatus] Realtime connected");
+              setIsRealtimeConnected(true);
+              stopPolling();
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.warn("[usePurchaseStatus] Realtime failed, using polling:", err);
+              setIsRealtimeConnected(false);
+              startPolling();
+            }
+          });
+      } catch (err) {
+        console.warn("[usePurchaseStatus] Error setting up realtime:", err);
+        setIsRealtimeConnected(false);
+        startPolling();
+      }
+    };
 
-      // Channel 2: Listen to profiles changes (for is_paid)
-      profilesChannel = supabase
-        .channel(`profiles_${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "profiles",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            console.log("[usePurchaseStatus] profiles changed:", payload);
-            checkPurchaseStatus(true);
-          }
-        )
-        .subscribe((status, err) => {
-          if (status === "SUBSCRIBED") {
-            console.log("[usePurchaseStatus] Realtime connected for profiles");
-          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.error("[usePurchaseStatus] Realtime error for profiles:", err);
-          }
-        });
+    setupRealtime();
 
-    } catch (err) {
-      console.error("[usePurchaseStatus] Error setting up realtime:", err);
-      setIsRealtimeConnected(false);
-      startPolling();
-    }
+    // Fallback: start polling if realtime doesn't connect in 5 seconds
+    const timeout = setTimeout(() => {
+      if (!connectionAttempted) {
+        console.warn("[usePurchaseStatus] Realtime timeout, falling back to polling");
+        startPolling();
+      }
+    }, 5000);
 
     return () => {
-      if (purchasesChannel) supabase.removeChannel(purchasesChannel);
-      if (profilesChannel) supabase.removeChannel(profilesChannel);
+      clearTimeout(timeout);
+      if (channel) supabase.removeChannel(channel);
       stopPolling();
     };
   }, [user, authLoading, checkPurchaseStatus, startPolling, stopPolling]);
