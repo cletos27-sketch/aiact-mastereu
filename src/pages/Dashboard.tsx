@@ -896,13 +896,28 @@ const Dashboard = () => {
                   variant="default"
                   onClick={async () => {
                     try {
-                      const { data, error } = await supabase.functions.invoke("create-checkout");
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      const accessToken = sessionData.session?.access_token;
+
+                      if (!accessToken) {
+                        toast.info("Faça login para continuar com a compra");
+                        navigate("/login");
+                        return;
+                      }
+
+                      const { data, error } = await supabase.functions.invoke("create-checkout", {
+                        headers: {
+                          Authorization: `Bearer ${accessToken}`,
+                        },
+                      });
+
                       if (error) {
                         toast.error("Erro ao iniciar checkout. Tente novamente.");
                         return;
                       }
+
                       if (data?.url) {
-                        window.location.href = data.url;
+                        window.location.assign(data.url);
                       }
                     } catch (err) {
                       toast.error("Erro ao processar. Tente novamente.");
@@ -969,15 +984,27 @@ const Dashboard = () => {
                   variant="gold"
                   onClick={async () => {
                     try {
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      const accessToken = sessionData.session?.access_token;
+
+                      if (!accessToken) {
+                        toast.info("Faça login para continuar com a compra");
+                        navigate("/login");
+                        return;
+                      }
+
                       const { data, error } = await supabase.functions.invoke("create-checkout", {
-                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }
+                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" },
+                        headers: {
+                          Authorization: `Bearer ${accessToken}`,
+                        },
                       });
                       if (error) {
                         toast.error("Erro ao iniciar checkout. Tente novamente.");
                         return;
                       }
                       if (data?.url) {
-                        window.location.href = data.url;
+                        window.location.assign(data.url);
                       }
                     } catch (err) {
                       toast.error("Erro ao processar. Tente novamente.");
@@ -1244,15 +1271,27 @@ const Dashboard = () => {
                   size="lg"
                   onClick={hasPremiumAccess ? handleDownloadLiteracyGuide : async () => {
                     try {
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      const accessToken = sessionData.session?.access_token;
+
+                      if (!accessToken) {
+                        toast.info("Faça login para continuar com a compra");
+                        navigate("/login");
+                        return;
+                      }
+
                       const { data, error } = await supabase.functions.invoke("create-checkout", {
-                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }
+                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" },
+                        headers: {
+                          Authorization: `Bearer ${accessToken}`,
+                        },
                       });
                       if (error) {
                         toast.error("Erro ao iniciar checkout. Tente novamente.");
                         return;
                       }
                       if (data?.url) {
-                        window.location.href = data.url;
+                        window.location.assign(data.url);
                       }
                     } catch (err) {
                       toast.error("Erro ao processar. Tente novamente.");

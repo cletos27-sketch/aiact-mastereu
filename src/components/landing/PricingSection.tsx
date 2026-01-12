@@ -95,8 +95,8 @@ const PricingSection = () => {
       }
 
       if (data?.url) {
-        // Open checkout in same tab for better UX
-        window.location.href = data.url;
+        // Redirect in the same tab
+        window.location.assign(data.url);
       } else {
         toast.error("Erro: URL de checkout não recebida");
       }
