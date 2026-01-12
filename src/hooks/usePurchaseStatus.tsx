@@ -6,7 +6,16 @@ import { toast } from "sonner";
 // Status values: "paid" = successful payment, "active" = legacy/subscription, "canceled", "payment_failed", "pending"
 export type PurchaseStatus = "paid" | "active" | "canceled" | "payment_failed" | "pending" | null;
 
-// Product ID for Compliance Pack (TEST MODE)
+// Access levels based on price_id
+export type AccessLevel = "premium" | "basic" | null;
+
+// Price IDs for different plans
+const PRICE_IDS = {
+  PREMIUM: "price_1Snqs8IV86RXPoUIDO9x8pWp", // 499€ one-time - full access
+  BASIC: "price_1Snqs8IV86RXPoUIUHrXN5fI",   // 99€/month - basic access
+};
+
+// Product ID for Compliance Pack
 const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 
 // Polling interval in milliseconds (3 seconds for faster sync)
@@ -16,19 +25,32 @@ export const usePurchaseStatus = () => {
   const { user, loading: authLoading } = useAuth();
   const [hasCompliancePack, setHasCompliancePack] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>(null);
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>(null);
   const [isSubscriptionEnded, setIsSubscriptionEnded] = useState(false);
+  const [hasAnyPurchaseRecord, setHasAnyPurchaseRecord] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousStatusRef = useRef<PurchaseStatus>(null);
 
+  // Determine access level based on price_id
+  const getAccessLevel = (priceId: string | null): AccessLevel => {
+    if (!priceId) return null;
+    if (priceId === PRICE_IDS.PREMIUM) return "premium";
+    if (priceId === PRICE_IDS.BASIC) return "basic";
+    // Default to basic for unknown prices
+    return "basic";
+  };
+
   // IMPLACABLE CHECK: Verifies both user_purchases AND profiles.is_paid
   const checkPurchaseStatus = useCallback(async (showToast = false) => {
     if (!user) {
       setHasCompliancePack(false);
       setPurchaseStatus(null);
+      setAccessLevel(null);
       setIsSubscriptionEnded(false);
+      setHasAnyPurchaseRecord(null);
       setLoading(false);
       setError(null);
       return;
@@ -38,10 +60,10 @@ export const usePurchaseStatus = () => {
       setError(null);
       
       // Query BOTH tables in parallel for absolute certainty
-      const [purchaseResult, profileResult] = await Promise.all([
+      const [purchaseResult, profileResult, allPurchasesResult] = await Promise.all([
         supabase
           .from("user_purchases")
-          .select("status, product_id")
+          .select("status, product_id, price_id")
           .eq("user_id", user.id)
           .eq("product_id", VALID_PRODUCT_ID)
           .maybeSingle(),
@@ -49,13 +71,20 @@ export const usePurchaseStatus = () => {
           .from("profiles")
           .select("is_paid")
           .eq("user_id", user.id)
-          .maybeSingle()
+          .maybeSingle(),
+        // Check if user has ANY purchase record at all
+        supabase
+          .from("user_purchases")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
       ]);
 
       const purchaseData = purchaseResult.data;
       const purchaseError = purchaseResult.error;
       const profileData = profileResult.data;
       const profileError = profileResult.error;
+      const allPurchases = allPurchasesResult.data;
 
       if (purchaseError) {
         console.error("Error checking purchase status:", purchaseError);
@@ -67,12 +96,19 @@ export const usePurchaseStatus = () => {
         console.error("Error checking profile is_paid:", profileError);
       }
 
+      // Track if user has any purchase record
+      const hasPurchaseRecord = allPurchases && allPurchases.length > 0;
+      setHasAnyPurchaseRecord(hasPurchaseRecord);
+
       // IMPLACABLE LOGIC: Only 'paid' or 'active' status AND is_paid=true grants access
       const validPurchaseStatus = purchaseData?.status === "paid" || purchaseData?.status === "active";
       const profileIsPaid = profileData?.is_paid === true;
       
       // Access is granted ONLY if BOTH conditions are true
       const hasAccess = validPurchaseStatus && profileIsPaid;
+      
+      // Determine access level based on price_id
+      const currentAccessLevel = hasAccess ? getAccessLevel(purchaseData?.price_id || null) : null;
       
       // Detect subscription ended state
       const subscriptionEnded = 
@@ -87,13 +123,17 @@ export const usePurchaseStatus = () => {
       // Update state
       setHasCompliancePack(hasAccess);
       setPurchaseStatus(currentStatus);
+      setAccessLevel(currentAccessLevel);
       setIsSubscriptionEnded(subscriptionEnded);
       previousStatusRef.current = currentStatus;
 
       // Show notifications for status changes
       if (showToast) {
         if (hasAccess && !previousStatus) {
-          toast.success("🎉 Dossiê de Conformidade desbloqueado!");
+          const levelMsg = currentAccessLevel === "premium" 
+            ? "🎉 Pacote Premium desbloqueado - Acesso completo!" 
+            : "🎉 Plano Mensal ativado - Acesso básico!";
+          toast.success(levelMsg);
         } else if (subscriptionEnded && previousStatus && (previousStatus === "paid" || previousStatus === "active")) {
           toast.error("⚠️ Assinatura Encerrada - Acesso aos documentos bloqueado.");
         }
@@ -103,16 +143,21 @@ export const usePurchaseStatus = () => {
       console.log("[usePurchaseStatus] Check complete:", {
         userId: user.id,
         purchaseStatus: currentStatus,
+        priceId: purchaseData?.price_id,
+        accessLevel: currentAccessLevel,
         profileIsPaid,
         hasAccess,
-        subscriptionEnded
+        subscriptionEnded,
+        hasAnyPurchaseRecord: hasPurchaseRecord
       });
 
     } catch (err) {
       console.error("Error checking purchase status:", err);
       setHasCompliancePack(false);
       setPurchaseStatus(null);
+      setAccessLevel(null);
       setIsSubscriptionEnded(false);
+      setHasAnyPurchaseRecord(null);
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       setError(errorMessage);
       if (showToast) toast.error(`Erro de conexão: ${errorMessage}`);
@@ -228,13 +273,21 @@ export const usePurchaseStatus = () => {
 
   const isPaymentFailed = purchaseStatus === "payment_failed";
   const isCanceled = purchaseStatus === "canceled";
+  
+  // Derived access checks
+  const hasPremiumAccess = hasCompliancePack && accessLevel === "premium";
+  const hasBasicAccess = hasCompliancePack && accessLevel === "basic";
 
   return { 
     hasCompliancePack, 
     purchaseStatus,
+    accessLevel,
+    hasPremiumAccess,
+    hasBasicAccess,
     isPaymentFailed,
     isCanceled,
     isSubscriptionEnded,
+    hasAnyPurchaseRecord,
     isRealtimeConnected,
     loading,
     error,
