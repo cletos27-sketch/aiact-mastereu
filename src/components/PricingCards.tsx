@@ -55,7 +55,8 @@ const PricingCards = ({ hasCompliancePack }: PricingCardsProps) => {
       });
       if (error) throw error;
       if (data?.url) {
-        window.open(data.url, "_blank");
+        // Use window.location.href to avoid popup blockers
+        window.location.href = data.url;
       }
     } catch (error) {
       console.error("Checkout error:", error);

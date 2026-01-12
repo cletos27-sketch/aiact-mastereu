@@ -117,9 +117,13 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const { 
     hasCompliancePack, 
+    hasPremiumAccess,
+    hasBasicAccess,
+    accessLevel,
     isPaymentFailed, 
     isCanceled,
     isSubscriptionEnded,
+    hasAnyPurchaseRecord,
     loading: purchaseLoading, 
     refresh: refreshPurchase 
   } = usePurchaseStatus();
@@ -180,6 +184,11 @@ const Dashboard = () => {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
       return;
     }
+    // Check if user has premium access for document downloads
+    if (hasBasicAccess && !hasPremiumAccess) {
+      toast.error("⚠️ Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar o Guia de Literacia.");
+      return;
+    }
     setGeneratingLiteracyGuide(true);
     try {
       // Fetch latest assessment for personalized content
@@ -217,6 +226,11 @@ const Dashboard = () => {
     }
     if (!hasCompliancePack) {
       toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
+      return;
+    }
+    // Check if user has premium access for document downloads
+    if (hasBasicAccess && !hasPremiumAccess) {
+      toast.error("⚠️ Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar todos os documentos.");
       return;
     }
     generateQuickPDF(docId, docName);
@@ -842,8 +856,28 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Subscription Ended Warning Banner - IMPLACABLE */}
-          {isSubscriptionEnded && !isPaymentFailed && (
+          {/* No Purchase Record Banner - Show only if user has ZERO records */}
+          {hasAnyPurchaseRecord === false && !purchaseLoading && (
+            <div className="legal-card p-6 mb-8 border-gold/50 bg-gradient-to-r from-gold/10 to-accent/5">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-6 h-6 text-gold" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="font-display text-lg font-semibold text-gold mb-1">
+                    🚀 Comece sua Conformidade
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você ainda não adquiriu nenhum plano. Escolha uma opção abaixo para desbloquear 
+                    diagnósticos e documentos de conformidade com o EU AI Act.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Subscription Ended Warning Banner - Show only if user HAS a purchase record but it's ended */}
+          {isSubscriptionEnded && !isPaymentFailed && hasAnyPurchaseRecord === true && (
             <div className="legal-card p-6 mb-8 border-red-600/70 bg-red-600/15">
               <div className="flex flex-col md:flex-row items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-red-600/30 flex items-center justify-center flex-shrink-0">
@@ -914,7 +948,48 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Global System Announcements Section */}
+          {/* Basic Plan Info Banner - Show for users with basic access */}
+          {hasBasicAccess && !hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed && (
+            <div className="legal-card p-6 mb-8 border-blue-500/50 bg-blue-500/10">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <Info className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="font-display text-lg font-semibold text-blue-500 mb-1">
+                    📊 Plano Mensal Ativo
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você tem acesso a <strong>diagnósticos básicos e painel de conformidade</strong>. 
+                    Para desbloquear downloads de documentos e consultoria IA avançada, 
+                    faça upgrade para o <strong>Pacote Premium (499€)</strong>.
+                  </p>
+                </div>
+                <Button 
+                  variant="gold"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke("create-checkout", {
+                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }
+                      });
+                      if (error) {
+                        toast.error("Erro ao iniciar checkout. Tente novamente.");
+                        return;
+                      }
+                      if (data?.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (err) {
+                      toast.error("Erro ao processar. Tente novamente.");
+                    }
+                  }}
+                >
+                  Fazer Upgrade
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!announcementsLoading && systemAnnouncements.length > 0 && (
             <div className="legal-card p-6 mb-8 border-primary/30 bg-primary/5">
               <div className="flex items-center gap-3 mb-6">
@@ -1114,51 +1189,86 @@ const Dashboard = () => {
             <PricingCards hasCompliancePack={hasCompliancePack} />
           )}
 
-          {/* AI Literacy Guide Section - Compliance Pack Feature (show only if purchased) */}
+          {/* AI Literacy Guide Section - Premium Feature (show only if purchased) */}
           {hasCompliancePack && (
-            <div className="legal-card p-6 mb-8 bg-gradient-to-r from-gold/5 to-accent/5 border-gold/30">
+            <div className={`legal-card p-6 mb-8 ${
+              hasPremiumAccess 
+                ? "bg-gradient-to-r from-gold/5 to-accent/5 border-gold/30" 
+                : "bg-muted/20 border-muted"
+            }`}>
               <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold to-gold/70 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <GraduationCap className="w-8 h-8 text-primary" />
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+                  hasPremiumAccess 
+                    ? "bg-gradient-to-br from-gold to-gold/70" 
+                    : "bg-muted/50"
+                }`}>
+                  <GraduationCap className={`w-8 h-8 ${hasPremiumAccess ? "text-primary" : "text-muted-foreground"}`} />
                 </div>
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex items-center gap-2 justify-center md:justify-start mb-1">
                     <h2 className="font-display text-xl font-semibold text-foreground">
                       Guia de Literacia em IA (Artigo 4)
                     </h2>
-                    <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-500 rounded-full">
-                      ✓ Desbloqueado
-                    </span>
+                    {hasPremiumAccess ? (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-500 rounded-full">
+                        ✓ Desbloqueado
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-gold/10 text-gold rounded-full">
+                        Premium
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Documento profissional de 8 páginas baseado no EU AI Act 2026. Inclui introdução à IA para colaboradores, 
-                    direitos e responsabilidades, identificação de vieses, e procedimentos internos de reporte.
+                    {hasPremiumAccess 
+                      ? "Documento profissional de 8 páginas baseado no EU AI Act 2026. Inclui introdução à IA para colaboradores, direitos e responsabilidades, identificação de vieses, e procedimentos internos de reporte."
+                      : "Disponível apenas para o Pacote Premium (499€). Faça upgrade para acessar este documento completo."
+                    }
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center md:justify-start text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
-                      <BookOpen className="h-3 w-3" /> Formação Completa
-                    </span>
-                    <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
-                      <CheckCircle2 className="h-3 w-3" /> Conformidade Art. 4
-                    </span>
-                    <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
-                      <FileText className="h-3 w-3" /> Personalizado
-                    </span>
-                  </div>
+                  {hasPremiumAccess && (
+                    <div className="flex flex-wrap gap-2 justify-center md:justify-start text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
+                        <BookOpen className="h-3 w-3" /> Formação Completa
+                      </span>
+                      <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
+                        <CheckCircle2 className="h-3 w-3" /> Conformidade Art. 4
+                      </span>
+                      <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
+                        <FileText className="h-3 w-3" /> Personalizado
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <Button 
-                  variant="gold" 
+                  variant={hasPremiumAccess ? "gold" : "outline"}
                   size="lg"
-                  onClick={handleDownloadLiteracyGuide}
+                  onClick={hasPremiumAccess ? handleDownloadLiteracyGuide : async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke("create-checkout", {
+                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }
+                      });
+                      if (error) {
+                        toast.error("Erro ao iniciar checkout. Tente novamente.");
+                        return;
+                      }
+                      if (data?.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (err) {
+                      toast.error("Erro ao processar. Tente novamente.");
+                    }
+                  }}
                   disabled={generatingLiteracyGuide}
                   className="flex items-center gap-2 min-w-[180px]"
                 >
                   {generatingLiteracyGuide ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+                  ) : hasPremiumAccess ? (
                     <Download className="h-4 w-4" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
                   )}
-                  {generatingLiteracyGuide ? "Gerando..." : "Download PDF"}
+                  {generatingLiteracyGuide ? "Gerando..." : hasPremiumAccess ? "Download PDF" : "Fazer Upgrade"}
                 </Button>
               </div>
             </div>
@@ -1205,19 +1315,36 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {documents.map((doc) => {
                   const DocIcon = doc.icon;
+                  // Document access requires premium plan
+                  const canDownload = hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed;
+                  const isBasicLocked = hasBasicAccess && !hasPremiumAccess;
+                  
                   return (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-accent/50 hover:bg-muted/30 transition-all group"
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-all group ${
+                        isBasicLocked 
+                          ? "border-border bg-muted/20 opacity-70" 
+                          : "border-border hover:border-accent/50 hover:bg-muted/30"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                          <DocIcon className="w-5 h-5 text-accent" />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          isBasicLocked ? "bg-muted/30" : "bg-accent/10"
+                        }`}>
+                          <DocIcon className={`w-5 h-5 ${isBasicLocked ? "text-muted-foreground" : "text-accent"}`} />
                         </div>
                         <div>
-                          <p className="font-medium text-sm text-foreground">
-                            {doc.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium text-sm ${isBasicLocked ? "text-muted-foreground" : "text-foreground"}`}>
+                              {doc.name}
+                            </p>
+                            {isBasicLocked && (
+                              <span className="text-xs px-1.5 py-0.5 bg-gold/10 text-gold rounded">
+                                Premium
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {doc.format} • {doc.size}
                           </p>
@@ -1226,11 +1353,17 @@ const Dashboard = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`transition-opacity ${hasCompliancePack ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
+                        className={`transition-opacity ${canDownload ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
                         onClick={() => handleDocumentDownload(doc.id, doc.name)}
-                        title={hasCompliancePack ? "Download" : "Requer Dossiê de Conformidade"}
+                        title={
+                          isBasicLocked 
+                            ? "Requer Pacote Premium (499€)" 
+                            : canDownload 
+                              ? "Download" 
+                              : "Requer Dossiê de Conformidade"
+                        }
                       >
-                        {hasCompliancePack ? (
+                        {canDownload ? (
                           <Download className="w-4 h-4" />
                         ) : (
                           <Lock className="w-4 h-4" />
