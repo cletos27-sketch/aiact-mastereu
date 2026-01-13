@@ -3,11 +3,12 @@
 
 // Allowed origins whitelist
 const ALLOWED_ORIGINS = [
-  "https://dysoidrqyndwvadiwcrq.lovable.app",
+  "https://aiact-mastereu.lovable.app", // Seu domínio de produção
+  "https://dysoidrqyndwvadiwcrq.lovable.app", // Manter para ambiente de preview/staging se ainda em uso
   "https://lovable.dev",
-  "http://localhost:5173",
-  "http://localhost:8080",
-  "http://localhost:3000",
+  // "http://localhost:5173", // Remover em produção
+  // "http://localhost:8080", // Remover em produção
+  // "http://localhost:3000", // Remover em produção
 ];
 
 // Pattern to match Lovable project preview URLs
@@ -22,7 +23,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   
   // Check if origin is in allowed list OR matches Lovable preview pattern
   const isAllowed = ALLOWED_ORIGINS.includes(origin) || LOVABLE_PREVIEW_PATTERN.test(origin);
-  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0]; // Fallback para o primeiro da lista se não permitido
   
   return {
     "Access-Control-Allow-Origin": allowedOrigin,

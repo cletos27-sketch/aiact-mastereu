@@ -241,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      // === HaveIBeenPwned Check ===
+      // === HaveIBeenPwned Check (Client-side placeholder) ===
       const isPwned = await checkPasswordForPwned(password);
       if (isPwned) {
         toast({
@@ -267,7 +267,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        if (error.message.includes("already registered")) {
+        // Check for Supabase's native leaked password error message
+        if (error.message.includes("Password has been found in a public data breach")) {
+          toast({
+            title: "Senha comprometida",
+            description: "Esta senha foi encontrada em vazamentos de dados. Por favor, escolha uma senha mais segura.",
+            variant: "destructive",
+          });
+          return { error: new Error("Pwned password") }; // Return a generic error to avoid exposing internal messages
+        } else if (error.message.includes("already registered")) {
           toast({
             title: "Email já registrado",
             description: "Este email já possui uma conta. Tente fazer login.",
@@ -302,7 +310,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // === HaveIBeenPwned Check ===
+      // === HaveIBeenPwned Check (Client-side placeholder) ===
       const isPwned = await checkPasswordForPwned(password);
       if (isPwned) {
         toast({
@@ -320,7 +328,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        // Check for Supabase's native leaked password error message
+        if (error.message.includes("Password has been found in a public data breach")) {
+          toast({
+            title: "Senha comprometida",
+            description: "Esta senha foi encontrada em vazamentos de dados. Por favor, escolha uma senha mais segura.",
+            variant: "destructive",
+          });
+          return { error: new Error("Pwned password") }; // Return a generic error to avoid exposing internal messages
+        } else if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Credenciais inválidas",
             description: "Email ou senha incorretos.",

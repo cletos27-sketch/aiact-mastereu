@@ -49,7 +49,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "https://lovable.dev";
+    const origin = req.headers.get("origin") || "https://aiact-mastereu.lovable.app"; // Updated fallback to production domain
     
     // Create billing portal session with configuration for easy cancellation
     // EU Digital Fairness Act 2026 compliant - no dark patterns

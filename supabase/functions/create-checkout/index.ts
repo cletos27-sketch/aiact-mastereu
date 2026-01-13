@@ -87,7 +87,7 @@ serve(async (req) => {
       logStep("Found existing Stripe customer", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://dysoidrqyndwvadiwcrq.lovable.app";
+    const origin = req.headers.get("origin") || "https://aiact-mastereu.lovable.app"; // Updated fallback to production domain
 
     // Create checkout session with appropriate mode
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
