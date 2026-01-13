@@ -123,9 +123,13 @@ serve(async (req) => {
         // Only process if payment was successful
         if (session.payment_status === "paid") {
           const productId = VALID_PRODUCT_ID;
-          const priceId = "price_1Snqs8IV86RXPoUIUHrXN5fI";
-          const amount = 4900;
-          const currency = "eur";
+          
+          // Extract price_id, amount, and currency from the session's line items
+          const lineItem = session.line_items?.data?.[0];
+          const priceId = lineItem?.price?.id || session.metadata?.price_id || "unknown";
+          const amount = session.amount_total || 0; // amount_total is in cents
+          const currency = session.currency || "eur";
+          
           const status: PurchaseStatus = "paid";
           const userEmail = session.customer_details?.email || session.customer_email || "";
 
@@ -245,9 +249,9 @@ serve(async (req) => {
                 user_id: user.id,
                 user_email: customerEmail,
                 product_id: VALID_PRODUCT_ID,
-                price_id: "price_1Snqs8IV86RXPoUIUHrXN5fI",
-                amount: 4900,
-                currency: "eur",
+                price_id: subscription.items.data[0]?.price?.id || "unknown", // Use actual price ID from subscription
+                amount: subscription.items.data[0]?.price?.unit_amount || 0, // Use actual amount
+                currency: subscription.currency || "eur",
                 status: "canceled" as PurchaseStatus,
                 updated_at: new Date().toISOString(),
                 stripe_customer_id: customerId,

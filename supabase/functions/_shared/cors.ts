@@ -9,6 +9,7 @@ const ALLOWED_ORIGINS = [
   // "http://localhost:5173", // Remover em produção
   // "http://localhost:8080", // Remover em produção
   // "http://localhost:3000", // Remover em produção
+  // TODO: Adicione aqui o seu novo domínio de produção (ex: "https://seunovoapp.com")
 ];
 
 // Pattern to match Lovable project preview URLs
