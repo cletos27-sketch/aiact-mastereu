@@ -10,8 +10,8 @@ const logStep = (step: string, details?: unknown) => {
 
 // Valid price configurations (TEST MODE)
 const VALID_PRICES = {
-  "price_1Snqs8IV86RXPoUIDO9x8pWp": { mode: "payment", product_id: "prod_TlNdrEbFfZcfIg" },
-  "price_1Snqs8IV86RXPoUIUHrXN5fI": { mode: "subscription", product_id: "prod_TlNdrEbFfZcfIg" },
+  "price_1Snqs8IV86RXPoUIDO9x8pWp": { mode: "payment", product_id: "prod_TlNdrEbFfZcfIg", plan_type: "premium" }, // 499€ one-time
+  "price_1Snqs8IV86RXPoUIUHrXN5fI": { mode: "subscription", product_id: "prod_TlNdrEbFfZcfIg", plan_type: "monthly" }, // 99€/month
 };
 
 serve(async (req) => {
@@ -70,7 +70,8 @@ serve(async (req) => {
       throw new Error("Invalid price_id provided");
     }
 
-    const plan_type = priceConfig.mode === "subscription" ? "monthly" : "premium";
+    // Use plan_type directly from priceConfig
+    const plan_type = priceConfig.plan_type;
 
     logStep("Price selected", { price_id, mode: priceConfig.mode, plan_type });
 
@@ -106,7 +107,7 @@ serve(async (req) => {
         user_id: userId,
         user_email: email,
         price_id: price_id,
-        plan_type,
+        plan_type, // Now explicitly from priceConfig
       },
     };
 

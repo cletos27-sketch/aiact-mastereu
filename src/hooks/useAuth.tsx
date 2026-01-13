@@ -218,8 +218,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [ensureProfileExists, savePendingAssessment]);
 
+  // Placeholder for HaveIBeenPwned check
+  const checkPasswordForPwned = async (password: string): Promise<boolean> => {
+    // This is a client-side placeholder.
+    // For production, implement this via a Supabase Edge Function or a secure backend.
+    // Example using k-anonymity (requires SHA1 hashing on client, then API call):
+    // const sha1Hash = await hashPasswordSHA1(password); // You'd need to implement this
+    // const prefix = sha1Hash.substring(0, 5);
+    // const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    // const text = await response.text();
+    // return text.includes(sha1Hash.substring(5));
+    
+    // For now, we'll simulate a check or always pass.
+    // In a real scenario, this would be an async call to your Edge Function.
+    console.log("Checking password against HaveIBeenPwned (simulated)...");
+    // Simulate a pwned password for demonstration
+    if (password === "password123") { // Example of a weak/pwned password
+      return true; 
+    }
+    return false;
+  };
+
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      // === HaveIBeenPwned Check ===
+      const isPwned = await checkPasswordForPwned(password);
+      if (isPwned) {
+        toast({
+          title: "Senha comprometida",
+          description: "Esta senha foi encontrada em vazamentos de dados. Por favor, escolha uma senha mais segura.",
+          variant: "destructive",
+        });
+        return { error: new Error("Pwned password") };
+      }
+      // === End HaveIBeenPwned Check ===
+
       const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
@@ -269,6 +302,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // === HaveIBeenPwned Check ===
+      const isPwned = await checkPasswordForPwned(password);
+      if (isPwned) {
+        toast({
+          title: "Senha comprometida",
+          description: "Esta senha foi encontrada em vazamentos de dados. Por favor, escolha uma senha mais segura.",
+          variant: "destructive",
+        });
+        return { error: new Error("Pwned password") };
+      }
+      // === End HaveIBeenPwned Check ===
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
