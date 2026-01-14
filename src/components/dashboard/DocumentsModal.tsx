@@ -245,12 +245,30 @@ const documentTemplates: Record<DocumentType, { title: string; sections: string[
 
 const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
   const { user } = useAuth();
-  const { hasCompliancePack, isPaymentFailed, loading: purchaseLoading } = usePurchaseStatus();
+  const { 
+    hasCompliancePack, 
+    hasPremiumAccess, 
+    hasBasicAccess, 
+    isPaymentFailed, 
+    isCanceled, 
+    isSubscriptionEnded, 
+    loading: purchaseLoading 
+  } = usePurchaseStatus();
   const [assessments, setAssessments] = useState<RiskAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
 
-  const handlePremiumDownload = (downloadFn: () => void) => {
+  const handleAccessCheck = (isPremiumDoc: boolean, downloadFn: () => void) => {
+    if (isSubscriptionEnded || isCanceled) {
+      toast.error("⚠️ Assinatura Encerrada", {
+        description: "Seu acesso aos documentos foi bloqueado. Adquira um plano para continuar.",
+        action: {
+          label: "Ver Planos",
+          onClick: () => window.location.href = "/#pricing",
+        },
+      });
+      return;
+    }
     if (isPaymentFailed) {
       toast.error("Assinatura Pendente", {
         description: "Por favor, atualize seus dados de pagamento para baixar documentos.",
@@ -267,6 +285,44 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
         action: {
           label: "Ver Planos",
           onClick: () => window.location.href = "/#pricing",
+        },
+      });
+      return;
+    }
+    // If it's a premium document and user only has basic access
+    if (isPremiumDoc && hasBasicAccess && !hasPremiumAccess) {
+      toast.error("⚠️ Upgrade Necessário", {
+        description: "Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar este documento.",
+        action: {
+          label: "Fazer Upgrade",
+          onClick: async () => {
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const accessToken = sessionData.session?.access_token;
+
+              if (!accessToken) {
+                toast.info("Faça login para continuar com a compra");
+                window.location.href = "/login";
+                return;
+              }
+
+              const { data, error } = await supabase.functions.invoke("create-checkout", {
+                body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }, // Premium one-time price
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
+              if (error) {
+                toast.error("Erro ao iniciar checkout. Tente novamente.");
+                return;
+              }
+              if (data?.url) {
+                window.location.assign(data.url);
+              }
+            } catch (err) {
+              toast.error("Erro ao processar. Tente novamente.");
+            }
+          },
         },
       });
       return;
@@ -300,14 +356,16 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
 
   const getRiskConfig = (classification: string) => {
     switch (classification) {
-      case "Risco Inaceitável":
-        return { color: "bg-red-500", icon: AlertTriangle, textColor: "text-red-400" };
-      case "Alto Risco":
-        return { color: "bg-orange-500", icon: Shield, textColor: "text-orange-400" };
-      case "Risco Limitado":
-        return { color: "bg-yellow-500", icon: Shield, textColor: "text-yellow-400" };
+      case "PROIBIDO":
+        return { color: "bg-risk-prohibited", icon: AlertTriangle, textColor: "text-risk-prohibited" };
+      case "ALTO_RISCO":
+        return { color: "bg-risk-high", icon: Shield, textColor: "text-risk-high" };
+      case "RISCO_LIMITADO":
+        return { color: "bg-risk-limited", icon: Shield, textColor: "text-risk-limited" };
+      case "RISCO_MINIMO":
+        return { color: "bg-risk-minimal", icon: CheckCircle, textColor: "text-risk-minimal" };
       default:
-        return { color: "bg-green-500", icon: CheckCircle, textColor: "text-green-400" };
+        return { color: "bg-muted-foreground", icon: CheckCircle, textColor: "text-muted-foreground" };
     }
   };
 
@@ -567,18 +625,18 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
 
           {/* AI Literacy Guide - Featured Document */}
           <div className={`bg-gradient-to-r rounded-lg border p-4 ${
-            hasCompliancePack 
+            hasPremiumAccess 
               ? "from-gold/10 to-accent/10 border-gold/30" 
               : "from-muted/50 to-muted/30 border-border"
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-md ${
-                  hasCompliancePack 
+                  hasPremiumAccess 
                     ? "bg-gradient-to-br from-gold to-gold/70" 
                     : "bg-muted"
                 }`}>
-                  {hasCompliancePack ? (
+                  {hasPremiumAccess ? (
                     <GraduationCap className="h-6 w-6 text-primary" />
                   ) : (
                     <Lock className="h-6 w-6 text-muted-foreground" />
@@ -590,11 +648,11 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                       Guia de Literacia em IA (Artigo 4)
                     </p>
                     <Badge className={`text-xs ${
-                      hasCompliancePack 
+                      hasPremiumAccess 
                         ? "bg-gold/20 text-gold" 
                         : "bg-muted text-muted-foreground"
                     }`}>
-                      {hasCompliancePack ? "Compliance Pack" : "🔒 Premium"}
+                      {hasPremiumAccess ? "Compliance Pack" : "🔒 Premium"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -603,9 +661,9 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 </div>
               </div>
               <Button
-                variant={hasCompliancePack ? "gold" : "outline"}
+                variant={hasPremiumAccess ? "gold" : "outline"}
                 size="sm"
-                onClick={() => handlePremiumDownload(() => {
+                onClick={() => handleAccessCheck(true, () => { // This is a premium document
                   generateAILiteracyGuidePDF(latestAssessment ? {
                     risk_classification: latestAssessment.risk_classification,
                     risk_score: latestAssessment.risk_score,
@@ -615,11 +673,11 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                   } : undefined);
                 })}
                 className="flex items-center gap-2"
-                disabled={purchaseLoading}
+                disabled={purchaseLoading || generatingPDF === "literacia"}
               >
-                {purchaseLoading ? (
+                {purchaseLoading || generatingPDF === "literacia" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : hasCompliancePack ? (
+                ) : hasPremiumAccess ? (
                   <>
                     <Download className="h-4 w-4" />
                     Download
@@ -650,21 +708,26 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
               {(Object.keys(documentTemplates) as DocumentType[]).map((docType) => {
                 const template = documentTemplates[docType];
                 const isGenerating = generatingPDF === docType;
+                // All documents in this section are considered premium
+                const isPremiumDoc = true; 
+                const canDownload = hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed;
+                const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
+                const isDisabled = purchaseLoading || isGenerating || isLockedForBasic || !hasCompliancePack;
                 
                 return (
                   <div
                     key={docType}
                     className={`flex items-center justify-between p-4 rounded-lg border transition-all group ${
-                      hasCompliancePack 
+                      canDownload 
                         ? "border-border hover:border-accent/50 hover:bg-muted/30" 
-                        : "border-border/50 bg-muted/20"
+                        : "border-border/50 bg-muted/20 opacity-70"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        hasCompliancePack ? "bg-accent/10" : "bg-muted"
+                        canDownload ? "bg-accent/10" : "bg-muted"
                       }`}>
-                        {hasCompliancePack ? (
+                        {canDownload ? (
                           <FileText className="h-5 w-5 text-accent" />
                         ) : (
                           <Lock className="h-5 w-5 text-muted-foreground" />
@@ -673,35 +736,35 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className={`font-medium text-sm ${
-                            hasCompliancePack ? "text-foreground" : "text-muted-foreground"
+                            canDownload ? "text-foreground" : "text-muted-foreground"
                           }`}>
                             {template.title}
                           </p>
-                          {!hasCompliancePack && (
+                          {!canDownload && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                              🔒
+                              🔒 Premium
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          PDF • {hasCompliancePack ? "Gerado dinamicamente" : "Conteúdo Premium"}
+                          PDF • {canDownload ? "Gerado dinamicamente" : "Conteúdo Premium"}
                         </p>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handlePremiumDownload(() => generateDocumentPDF(docType, latestAssessment))}
-                      disabled={isGenerating || purchaseLoading}
+                      onClick={() => handleAccessCheck(isPremiumDoc, () => generateDocumentPDF(docType, latestAssessment))}
+                      disabled={isDisabled}
                       className={`transition-opacity ${
-                        hasCompliancePack 
+                        canDownload 
                           ? "opacity-70 group-hover:opacity-100" 
                           : "opacity-50"
                       }`}
                     >
                       {isGenerating || purchaseLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : hasCompliancePack ? (
+                      ) : canDownload ? (
                         <Download className="h-4 w-4" />
                       ) : (
                         <Lock className="h-4 w-4" />

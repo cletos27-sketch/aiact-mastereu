@@ -68,6 +68,7 @@ const documents = [
     format: "PDF",
     size: "78 KB",
     icon: FileText,
+    premium: true, // All these documents are premium
   },
   {
     id: 2,
@@ -76,6 +77,7 @@ const documents = [
     format: "PDF",
     size: "45 KB",
     icon: Eye,
+    premium: true,
   },
   {
     id: 3,
@@ -84,6 +86,7 @@ const documents = [
     format: "PDF",
     size: "2.3 MB",
     icon: BookOpen,
+    premium: true,
   },
   {
     id: 4,
@@ -92,6 +95,7 @@ const documents = [
     format: "PDF",
     size: "32 KB",
     icon: ClipboardList,
+    premium: true,
   },
   {
     id: 5,
@@ -100,6 +104,7 @@ const documents = [
     format: "PDF",
     size: "56 KB",
     icon: ShieldAlert,
+    premium: true,
   },
   {
     id: 6,
@@ -108,6 +113,7 @@ const documents = [
     format: "PDF",
     size: "38 KB",
     icon: Users,
+    premium: true,
   },
 ];
 
@@ -147,6 +153,78 @@ const Dashboard = () => {
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
 
+  const handleAccessCheck = (isPremiumDoc: boolean, downloadFn: () => void) => {
+    if (isSubscriptionEnded || isCanceled) {
+      toast.error("⚠️ Assinatura Encerrada", {
+        description: "Seu acesso aos documentos foi bloqueado. Adquira um plano para continuar.",
+        action: {
+          label: "Ver Planos",
+          onClick: () => window.location.href = "/#pricing",
+        },
+      });
+      return;
+    }
+    if (isPaymentFailed) {
+      toast.error("Assinatura Pendente", {
+        description: "Por favor, atualize seus dados de pagamento para baixar documentos.",
+        action: {
+          label: "Atualizar Pagamento",
+          onClick: () => window.location.href = "/dashboard",
+        },
+      });
+      return;
+    }
+    if (!hasCompliancePack) {
+      toast.error("Conteúdo Premium", {
+        description: "Este documento está disponível apenas para clientes do Compliance Pack.",
+        action: {
+          label: "Ver Planos",
+          onClick: () => window.location.href = "/#pricing",
+        },
+      });
+      return;
+    }
+    // If it's a premium document and user only has basic access
+    if (isPremiumDoc && hasBasicAccess && !hasPremiumAccess) {
+      toast.error("⚠️ Upgrade Necessário", {
+        description: "Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar este documento.",
+        action: {
+          label: "Fazer Upgrade",
+          onClick: async () => {
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const accessToken = sessionData.session?.access_token;
+
+              if (!accessToken) {
+                toast.info("Faça login para continuar com a compra");
+                window.location.href = "/login";
+                return;
+              }
+
+              const { data, error } = await supabase.functions.invoke("create-checkout", {
+                body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" }, // Premium one-time price
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
+              if (error) {
+                toast.error("Erro ao iniciar checkout. Tente novamente.");
+                return;
+              }
+              if (data?.url) {
+                window.location.assign(data.url);
+              }
+            } catch (err) {
+              toast.error("Erro ao processar. Tente novamente.");
+            }
+          },
+        },
+      });
+      return;
+    }
+    downloadFn();
+  };
+
   const handleOpenCustomerPortal = async () => {
     setIsOpeningPortal(true);
     try {
@@ -172,23 +250,6 @@ const Dashboard = () => {
   };
 
   const handleDownloadLiteracyGuide = async () => {
-    if (isSubscriptionEnded || isCanceled) {
-      toast.error("⚠️ Assinatura Encerrada: Seu acesso aos documentos foi bloqueado.");
-      return;
-    }
-    if (isPaymentFailed) {
-      toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
-      return;
-    }
-    if (!hasCompliancePack) {
-      toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
-      return;
-    }
-    // Check if user has premium access for document downloads
-    if (hasBasicAccess && !hasPremiumAccess) {
-      toast.error("⚠️ Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar o Guia de Literacia.");
-      return;
-    }
     setGeneratingLiteracyGuide(true);
     try {
       // Fetch latest assessment for personalized content
@@ -216,23 +277,6 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
-    if (isSubscriptionEnded || isCanceled) {
-      toast.error("⚠️ Assinatura Encerrada: Seu acesso aos documentos foi bloqueado.");
-      return;
-    }
-    if (isPaymentFailed) {
-      toast.error("Assinatura Pendente: Por favor, atualize seus dados de pagamento para baixar documentos.");
-      return;
-    }
-    if (!hasCompliancePack) {
-      toast.error("Você precisa adquirir o Dossiê de Conformidade para baixar este documento.");
-      return;
-    }
-    // Check if user has premium access for document downloads
-    if (hasBasicAccess && !hasPremiumAccess) {
-      toast.error("⚠️ Seu plano mensal permite apenas diagnósticos básicos. Faça upgrade para o Pacote Premium (499€) para acessar todos os documentos.");
-      return;
-    }
     generateQuickPDF(docId, docName);
   };
 
@@ -1273,38 +1317,11 @@ const Dashboard = () => {
                 <Button 
                   variant={hasPremiumAccess ? "gold" : "outline"}
                   size="lg"
-                  onClick={hasPremiumAccess ? handleDownloadLiteracyGuide : async () => {
-                    try {
-                      const { data: sessionData } = await supabase.auth.getSession();
-                      const accessToken = sessionData.session?.access_token;
-
-                      if (!accessToken) {
-                        toast.info("Faça login para continuar com a compra");
-                        navigate("/login");
-                        return;
-                      }
-
-                      const { data, error } = await supabase.functions.invoke("create-checkout", {
-                        body: { price_id: "price_1Snqs8IV86RXPoUIDO9x8pWp" },
-                        headers: {
-                          Authorization: `Bearer ${accessToken}`,
-                        },
-                      });
-                      if (error) {
-                        toast.error("Erro ao iniciar checkout. Tente novamente.");
-                        return;
-                      }
-                      if (data?.url) {
-                        window.location.assign(data.url);
-                      }
-                    } catch (err) {
-                      toast.error("Erro ao processar. Tente novamente.");
-                    }
-                  }}
-                  disabled={generatingLiteracyGuide}
+                  onClick={() => handleAccessCheck(true, handleDownloadLiteracyGuide)} // This is a premium document
+                  disabled={generatingLiteracyGuide || purchaseLoading}
                   className="flex items-center gap-2 min-w-[180px]"
                 >
-                  {generatingLiteracyGuide ? (
+                  {generatingLiteracyGuide || purchaseLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : hasPremiumAccess ? (
                     <Download className="h-4 w-4" />
@@ -1358,31 +1375,34 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {documents.map((doc) => {
                   const DocIcon = doc.icon;
-                  // Document access requires premium plan
+                  const isPremiumDoc = doc.premium; // All documents here are premium
                   const canDownload = hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed;
-                  const isBasicLocked = hasBasicAccess && !hasPremiumAccess;
+                  const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
+                  const isDisabled = purchaseLoading || isLockedForBasic || !hasCompliancePack;
                   
                   return (
                     <div
                       key={doc.id}
                       className={`flex items-center justify-between p-4 rounded-lg border transition-all group ${
-                        isBasicLocked 
-                          ? "border-border bg-muted/20 opacity-70" 
-                          : "border-border hover:border-accent/50 hover:bg-muted/30"
+                        canDownload 
+                          ? "border-border hover:border-accent/50 hover:bg-muted/30" 
+                          : "border-border/50 bg-muted/20 opacity-70"
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          isBasicLocked ? "bg-muted/30" : "bg-accent/10"
+                          canDownload ? "bg-accent/10" : "bg-muted"
                         }`}>
-                          <DocIcon className={`w-5 h-5 ${isBasicLocked ? "text-muted-foreground" : "text-accent"}`} />
+                          <DocIcon className={`w-5 h-5 ${canDownload ? "text-accent" : "text-muted-foreground"}`} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className={`font-medium text-sm ${isBasicLocked ? "text-muted-foreground" : "text-foreground"}`}>
+                            <p className={`font-medium text-sm ${
+                              canDownload ? "text-foreground" : "text-muted-foreground"
+                            }`}>
                               {doc.name}
                             </p>
-                            {isBasicLocked && (
+                            {!canDownload && (
                               <span className="text-xs px-1.5 py-0.5 bg-gold/10 text-gold rounded">
                                 Premium
                               </span>
@@ -1397,9 +1417,10 @@ const Dashboard = () => {
                         variant="ghost"
                         size="sm"
                         className={`transition-opacity ${canDownload ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
-                        onClick={() => handleDocumentDownload(doc.id, doc.name)}
+                        onClick={() => handleAccessCheck(isPremiumDoc, () => handleDocumentDownload(doc.id, doc.name))}
+                        disabled={isDisabled}
                         title={
-                          isBasicLocked 
+                          isLockedForBasic 
                             ? "Requer Pacote Premium (499€)" 
                             : canDownload 
                               ? "Download" 
