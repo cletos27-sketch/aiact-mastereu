@@ -826,6 +826,10 @@ const Dashboard = () => {
                 onClick={async () => {
                   setIsRefreshingAccess(true);
                   await refreshPurchase();
+                  // After refresh, check if hasCompliancePack is true and reload
+                  if (hasCompliancePack) {
+                    window.location.reload();
+                  }
                   setIsRefreshingAccess(false);
                 }}
                 disabled={isRefreshingAccess || purchaseLoading}
