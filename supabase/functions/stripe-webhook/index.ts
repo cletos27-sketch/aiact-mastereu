@@ -72,6 +72,16 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Helper function to find user by email
+    const findUserByEmail = async (email: string) => {
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+      if (userError) {
+        logStep("Error listing users", { error: userError.message });
+        return null;
+      }
+      return userData.users.find((u) => u.email === email);
+    };
+
     // Handle Stripe events
     switch (event.type) {
       case "checkout.session.completed": {
@@ -82,10 +92,6 @@ serve(async (req) => {
           paymentStatus: session.payment_status 
         });
 
-        // Identify the user reliably
-        // Priority 1: session.metadata.user_id (explicit)
-        // Priority 2: client_reference_id
-        // Priority 3: find user by email (fallback)
         const metadataUserId = session.metadata?.user_id;
         const clientReferenceId = session.client_reference_id;
         const customerEmail = session.customer_email || session.customer_details?.email;
@@ -93,6 +99,7 @@ serve(async (req) => {
         logStep("Session identifiers", { metadataUserId, clientReferenceId, customerEmail });
 
         let userId: string | null = null;
+        let userEmail: string | null = customerEmail || null;
 
         if (metadataUserId) {
           userId = metadataUserId;
@@ -101,37 +108,29 @@ serve(async (req) => {
           userId = clientReferenceId;
           logStep("Using client_reference_id as user_id", { userId });
         } else if (customerEmail) {
-          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-          if (userError) {
-            logStep("Error listing users", { error: userError.message });
-            break;
-          }
-          const user = userData.users.find((u) => u.email === customerEmail);
+          const user = await findUserByEmail(customerEmail);
           if (user) {
             userId = user.id;
-            logStep("Found user by email", { userId, email: customerEmail });
+            userEmail = user.email;
+            logStep("Found user by email", { userId, email: userEmail });
           }
         }
 
-        if (!userId) {
-          logStep("No user found - missing metadata.user_id and client_reference_id and email lookup failed");
+        if (!userId || !userEmail) {
+          logStep("No user found or email missing for checkout.session.completed");
           break;
         }
 
         logStep("Processing for user", { userId });
 
-        // Only process if payment was successful
         if (session.payment_status === "paid") {
           const productId = VALID_PRODUCT_ID;
-          
-          // Extract price_id, amount, and currency from the session's line items
           const lineItem = session.line_items?.data?.[0];
           const priceId = lineItem?.price?.id || session.metadata?.price_id || "unknown";
-          const amount = session.amount_total || 0; // amount_total is in cents
+          const amount = session.amount_total || 0;
           const currency = session.currency || "eur";
           
           const status: PurchaseStatus = "paid";
-          const userEmail = session.customer_details?.email || session.customer_email || "";
 
           logStep("Upserting paid purchase", {
             userId,
@@ -143,7 +142,6 @@ serve(async (req) => {
             stripeSessionId: session.id,
           });
 
-          // UPSERT: Insert or update based on user_id + product_id
           const { error: upsertError } = await supabaseAdmin
             .from("user_purchases")
             .upsert(
@@ -172,7 +170,6 @@ serve(async (req) => {
             logStep("Purchase upserted successfully", { userId, productId, status });
           }
 
-          // Update profiles.is_paid to true
           const { error: profileError } = await supabaseAdmin
             .from("profiles")
             .update({ is_paid: true, updated_at: new Date().toISOString() })
@@ -197,93 +194,78 @@ serve(async (req) => {
         logStep("Processing subscription event", { 
           subscriptionId: subscription.id, 
           status: subscription.status,
-          customerId 
+          customerId,
+          eventType: event.type
         });
 
-        // Get customer email to find user
         const customer = await stripe.customers.retrieve(customerId);
         if (customer.deleted) {
-          logStep("Customer was deleted, skipping");
+          logStep("Customer was deleted, skipping subscription update");
           break;
         }
         
         const customerEmail = (customer as Stripe.Customer).email;
         if (!customerEmail) {
-          logStep("No customer email found, skipping");
+          logStep("No customer email found for subscription event, skipping");
           break;
         }
 
-        logStep("Found customer email", { email: customerEmail });
-
-        // Find user by email
-        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-        if (userError) {
-          logStep("Error listing users", { error: userError.message });
-          break;
-        }
-
-        const user = userData.users.find(u => u.email === customerEmail);
+        const user = await findUserByEmail(customerEmail);
         if (!user) {
-          logStep("No user found with email", { email: customerEmail });
+          logStep("No user found with email for subscription event", { email: customerEmail });
           break;
         }
 
-        logStep("Found user", { userId: user.id });
+        logStep("Found user for subscription event", { userId: user.id });
 
-        // Check subscription status
-        const isActive = subscription.status === "active" || subscription.status === "trialing";
-        const isCanceled = subscription.status === "canceled" || event.type === "customer.subscription.deleted";
+        const isActiveSubscription = subscription.status === "active" || subscription.status === "trialing";
+        const newPurchaseStatus: PurchaseStatus = isActiveSubscription ? "active" : "canceled";
+        const newIsPaid = isActiveSubscription;
 
-        if (isCanceled || !isActive) {
-          logStep("Processing cancellation/inactive subscription", { 
-            userId: user.id, 
-            subscriptionStatus: subscription.status,
-            eventType: event.type 
-          });
+        logStep("Updating subscription status and profile for user", { 
+          userId: user.id, 
+          subscriptionStatus: subscription.status,
+          newPurchaseStatus,
+          newIsPaid
+        });
 
-          // UPSERT: Update status to canceled
-          const { error: upsertError } = await supabaseAdmin
-            .from("user_purchases")
-            .upsert(
-              {
-                user_id: user.id,
-                user_email: customerEmail,
-                product_id: VALID_PRODUCT_ID,
-                price_id: subscription.items.data[0]?.price?.id || "unknown", // Use actual price ID from subscription
-                amount: subscription.items.data[0]?.price?.unit_amount || 0, // Use actual amount
-                currency: subscription.currency || "eur",
-                status: "canceled" as PurchaseStatus,
-                updated_at: new Date().toISOString(),
-                stripe_customer_id: customerId,
-              },
-              { 
-                onConflict: "user_id,product_id",
-                ignoreDuplicates: false 
-              }
-            );
+        // Update user_purchases status
+        const { error: upsertError } = await supabaseAdmin
+          .from("user_purchases")
+          .upsert(
+            {
+              user_id: user.id,
+              user_email: customerEmail,
+              product_id: VALID_PRODUCT_ID,
+              price_id: subscription.items.data[0]?.price?.id || "unknown",
+              amount: subscription.items.data[0]?.price?.unit_amount || 0,
+              currency: subscription.currency || "eur",
+              status: newPurchaseStatus,
+              updated_at: new Date().toISOString(),
+              stripe_customer_id: customerId,
+            },
+            { 
+              onConflict: "user_id,product_id",
+              ignoreDuplicates: false 
+            }
+          );
 
-          if (upsertError) {
-            logStep("Error upserting canceled purchase", { error: upsertError.message });
-          } else {
-            logStep("Purchase status upserted to canceled", { userId: user.id });
-          }
+        if (upsertError) {
+          logStep("Error upserting purchase status for subscription event", { error: upsertError.message });
+        } else {
+          logStep("Purchase status upserted successfully for subscription event", { userId: user.id, status: newPurchaseStatus });
+        }
 
-          // Update profiles.is_paid to false
-          const { error: profileError } = await supabaseAdmin
-            .from("profiles")
-            .update({ is_paid: false, updated_at: new Date().toISOString() })
-            .eq("user_id", user.id);
+        // Update profiles.is_paid
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .update({ is_paid: newIsPaid, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
 
-          if (profileError) {
-            logStep("Error updating profile is_paid to false", { error: profileError.message });
-          } else {
-            logStep("Profile is_paid updated to false", { userId: user.id });
-          }
-        } else if (subscription.cancel_at_period_end) {
-          logStep("Subscription marked for cancellation at period end", { 
-            userId: user.id,
-            cancelAt: subscription.cancel_at 
-          });
+        if (profileError) {
+          logStep("Error updating profile is_paid for subscription event", { error: profileError.message });
+        } else {
+          logStep("Profile is_paid updated successfully for subscription event", { userId: user.id, isPaid: newIsPaid });
         }
         break;
       }
@@ -292,30 +274,54 @@ serve(async (req) => {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
         
-        logStep("Payment failed", { invoiceId: invoice.id, customerId });
+        logStep("Processing invoice.payment_failed", { invoiceId: invoice.id, customerId });
 
-        // Get customer email
         const customer = await stripe.customers.retrieve(customerId);
-        if (customer.deleted) break;
+        if (customer.deleted) {
+          logStep("Customer was deleted, skipping payment_failed update");
+          break;
+        }
         
         const customerEmail = (customer as Stripe.Customer).email;
-        if (!customerEmail) break;
+        if (!customerEmail) {
+          logStep("No customer email found for payment_failed event, skipping");
+          break;
+        }
 
-        // Find user and update status
-        const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
-        const user = userData?.users.find(u => u.email === customerEmail);
-        
-        if (user) {
-          await supabaseAdmin
-            .from("user_purchases")
-            .update({ 
-              status: "payment_failed",
-              updated_at: new Date().toISOString()
-            })
-            .eq("user_id", user.id)
-            .eq("product_id", VALID_PRODUCT_ID);
+        const user = await findUserByEmail(customerEmail);
+        if (!user) {
+          logStep("No user found with email for payment_failed event", { email: customerEmail });
+          break;
+        }
 
+        logStep("Found user for payment_failed event", { userId: user.id });
+
+        // Update user_purchases status to payment_failed
+        const { error: purchaseUpdateError } = await supabaseAdmin
+          .from("user_purchases")
+          .update({ 
+            status: "payment_failed",
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", user.id)
+          .eq("product_id", VALID_PRODUCT_ID);
+
+        if (purchaseUpdateError) {
+          logStep("Error updating purchase status to payment_failed", { error: purchaseUpdateError.message });
+        } else {
           logStep("Purchase status updated to payment_failed", { userId: user.id });
+        }
+
+        // Update profiles.is_paid to false
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .update({ is_paid: false, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
+
+        if (profileError) {
+          logStep("Error updating profile is_paid to false for payment_failed", { error: profileError.message });
+        } else {
+          logStep("Profile is_paid updated to false for payment_failed", { userId: user.id });
         }
         break;
       }
