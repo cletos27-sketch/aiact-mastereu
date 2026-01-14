@@ -66,7 +66,9 @@ export const usePurchaseStatus = () => {
           .select("status, product_id, price_id")
           .eq("user_id", user.id)
           .eq("product_id", VALID_PRODUCT_ID)
-          .maybeSingle(),
+          .order("created_at", { ascending: false }) // Get the latest purchase
+          .limit(1)
+          .maybeSingle(), // Use maybeSingle to get null if no record
         supabase
           .from("profiles")
           .select("is_paid")
@@ -100,32 +102,31 @@ export const usePurchaseStatus = () => {
       const hasPurchaseRecord = allPurchases && allPurchases.length > 0;
       setHasAnyPurchaseRecord(hasPurchaseRecord);
 
-      // IMPLACABLE LOGIC: Only 'paid' or 'active' status AND is_paid=true grants access
-      const validPurchaseStatus = purchaseData?.status === "paid" || purchaseData?.status === "active";
+      // NEW LOGIC: Access is strictly based on profiles.is_paid
       const profileIsPaid = profileData?.is_paid === true;
-      
-      // Access is granted ONLY if BOTH conditions are true
-      const hasAccess = validPurchaseStatus && profileIsPaid;
-      
-      // Determine access level based on price_id
+      const currentPurchaseStatus = purchaseData?.status as PurchaseStatus || null; // Keep detailed status from user_purchases
+
+      const hasAccess = profileIsPaid; // This is the core change
+
+      // Determine access level based on price_id, but only if hasAccess is true
       const currentAccessLevel = hasAccess ? getAccessLevel(purchaseData?.price_id || null) : null;
       
-      // Detect subscription ended state
+      // Detect subscription ended state (more nuanced now)
       const subscriptionEnded = 
-        (purchaseData && !validPurchaseStatus) || // Has purchase record but invalid status
-        (profileData && !profileIsPaid) || // Profile explicitly marked as not paid
-        (purchaseData?.status === "canceled") ||
-        (purchaseData?.status === "payment_failed");
+        (hasPurchaseRecord && !profileIsPaid) || // Has a record, but profile says not paid
+        (currentPurchaseStatus === "canceled"); // Explicitly canceled
+
+      const isPaymentFailed = currentPurchaseStatus === "payment_failed";
+      const isCanceled = currentPurchaseStatus === "canceled"; // Redundant with subscriptionEnded, but kept for clarity
 
       const previousStatus = previousStatusRef.current;
-      const currentStatus = purchaseData?.status as PurchaseStatus || null;
       
       // Update state
-      setHasCompliancePack(hasAccess);
-      setPurchaseStatus(currentStatus);
+      setHasCompliancePack(hasAccess); // Now directly reflects profileIsPaid
+      setPurchaseStatus(currentPurchaseStatus);
       setAccessLevel(currentAccessLevel);
       setIsSubscriptionEnded(subscriptionEnded);
-      previousStatusRef.current = currentStatus;
+      previousStatusRef.current = currentPurchaseStatus;
 
       // Show notifications for status changes
       if (showToast) {
@@ -142,12 +143,14 @@ export const usePurchaseStatus = () => {
       // Log for debugging
       console.log("[usePurchaseStatus] Check complete:", {
         userId: user.id,
-        purchaseStatus: currentStatus,
+        profileIsPaid, // New debug log
+        purchaseStatus: currentPurchaseStatus,
         priceId: purchaseData?.price_id,
         accessLevel: currentAccessLevel,
-        profileIsPaid,
-        hasAccess,
+        hasAccess, // This is now profileIsPaid
         subscriptionEnded,
+        isPaymentFailed,
+        isCanceled,
         hasAnyPurchaseRecord: hasPurchaseRecord
       });
 

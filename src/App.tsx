@@ -20,6 +20,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import CookieConsent from "./components/CookieConsent";
+import { usePurchaseStatus } from "./hooks/usePurchaseStatus"; // Import usePurchaseStatus
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,18 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const AppContent = () => {
   const { user } = useAuth();
+  const { hasCompliancePack, loading: purchaseStatusLoading } = usePurchaseStatus(); // Use the hook
+
+  useEffect(() => {
+    // Debug log for access status
+    if (!purchaseStatusLoading) {
+      console.log("Status de acesso (usePurchaseStatus):", hasCompliancePack);
+      if (user) {
+        console.log("User ID:", user.id, "Email:", user.email);
+      }
+    }
+  }, [user, hasCompliancePack, purchaseStatusLoading]);
+
 
   useEffect(() => {
     const sincronizarDiagnostico = async () => {

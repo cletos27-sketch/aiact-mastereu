@@ -357,7 +357,7 @@ const Dashboard = () => {
           items: [
             "Capacidades de registo automático (logging) ao longo do ciclo de vida",
             "Dados registados para cada operação (timestamp, inputs, outputs, identificadores)",
-            "Período de conservação dos registos e formato de armazenamento",
+            "Período mínimo de conservação dos registos e formato de armazenamento",
             "Procedimentos de acesso aos logs para fins de auditoria",
             "Mecanismos que garantem a integridade e autenticidade dos registos"
           ]
@@ -1267,24 +1267,24 @@ const Dashboard = () => {
           {/* AI Literacy Guide Section - Premium Feature (show only if purchased) */}
           {hasCompliancePack && (
             <div className={`legal-card p-6 mb-8 ${
-              hasPremiumAccess 
+              hasCompliancePack 
                 ? "bg-gradient-to-r from-gold/5 to-accent/5 border-gold/30" 
                 : "bg-muted/20 border-muted"
             }`}>
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
-                  hasPremiumAccess 
+                  hasCompliancePack 
                     ? "bg-gradient-to-br from-gold to-gold/70" 
                     : "bg-muted/50"
                 }`}>
-                  <GraduationCap className={`w-8 h-8 ${hasPremiumAccess ? "text-primary" : "text-muted-foreground"}`} />
+                  <GraduationCap className={`w-8 h-8 ${hasCompliancePack ? "text-primary" : "text-muted-foreground"}`} />
                 </div>
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex items-center gap-2 justify-center md:justify-start mb-1">
                     <h2 className="font-display text-xl font-semibold text-foreground">
                       Guia de Literacia em IA (Artigo 4)
                     </h2>
-                    {hasPremiumAccess ? (
+                    {hasCompliancePack ? (
                       <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-500 rounded-full">
                         ✓ Desbloqueado
                       </span>
@@ -1295,12 +1295,12 @@ const Dashboard = () => {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    {hasPremiumAccess 
+                    {hasCompliancePack 
                       ? "Documento profissional de 8 páginas baseado no EU AI Act 2026. Inclui introdução à IA para colaboradores, direitos e responsabilidades, identificação de vieses, e procedimentos internos de reporte."
                       : "Disponível apenas para o Pacote Premium (499€). Faça upgrade para acessar este documento completo."
                     }
                   </p>
-                  {hasPremiumAccess && (
+                  {hasCompliancePack && (
                     <div className="flex flex-wrap gap-2 justify-center md:justify-start text-xs text-muted-foreground">
                       <span className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
                         <BookOpen className="h-3 w-3" /> Formação Completa
@@ -1315,7 +1315,7 @@ const Dashboard = () => {
                   )}
                 </div>
                 <Button 
-                  variant={hasPremiumAccess ? "gold" : "outline"}
+                  variant={hasCompliancePack ? "gold" : "outline"}
                   size="lg"
                   onClick={() => handleAccessCheck(true, handleDownloadLiteracyGuide)} // This is a premium document
                   disabled={generatingLiteracyGuide || purchaseLoading}
@@ -1323,12 +1323,12 @@ const Dashboard = () => {
                 >
                   {generatingLiteracyGuide || purchaseLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : hasPremiumAccess ? (
+                  ) : hasCompliancePack ? (
                     <Download className="h-4 w-4" />
                   ) : (
                     <Lock className="h-4 w-4" />
                   )}
-                  {generatingLiteracyGuide ? "Gerando..." : hasPremiumAccess ? "Download PDF" : "Fazer Upgrade"}
+                  {generatingLiteracyGuide ? "Gerando..." : hasCompliancePack ? "Download PDF" : "Fazer Upgrade"}
                 </Button>
               </div>
             </div>
@@ -1376,7 +1376,7 @@ const Dashboard = () => {
                 {documents.map((doc) => {
                   const DocIcon = doc.icon;
                   const isPremiumDoc = doc.premium; // All documents here are premium
-                  const canDownload = hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed;
+                  const canDownload = hasCompliancePack && !isSubscriptionEnded && !isPaymentFailed;
                   const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
                   const isDisabled = purchaseLoading || isLockedForBasic || !hasCompliancePack;
                   

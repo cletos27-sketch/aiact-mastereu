@@ -625,18 +625,18 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
 
           {/* AI Literacy Guide - Featured Document */}
           <div className={`bg-gradient-to-r rounded-lg border p-4 ${
-            hasPremiumAccess 
+            hasCompliancePack 
               ? "from-gold/10 to-accent/10 border-gold/30" 
               : "from-muted/50 to-muted/30 border-border"
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-md ${
-                  hasPremiumAccess 
+                  hasCompliancePack 
                     ? "bg-gradient-to-br from-gold to-gold/70" 
                     : "bg-muted"
                 }`}>
-                  {hasPremiumAccess ? (
+                  {hasCompliancePack ? (
                     <GraduationCap className="h-6 w-6 text-primary" />
                   ) : (
                     <Lock className="h-6 w-6 text-muted-foreground" />
@@ -648,11 +648,11 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                       Guia de Literacia em IA (Artigo 4)
                     </p>
                     <Badge className={`text-xs ${
-                      hasPremiumAccess 
+                      hasCompliancePack 
                         ? "bg-gold/20 text-gold" 
                         : "bg-muted text-muted-foreground"
                     }`}>
-                      {hasPremiumAccess ? "Compliance Pack" : "🔒 Premium"}
+                      {hasCompliancePack ? "Compliance Pack" : "🔒 Premium"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -661,7 +661,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 </div>
               </div>
               <Button
-                variant={hasPremiumAccess ? "gold" : "outline"}
+                variant={hasCompliancePack ? "gold" : "outline"}
                 size="sm"
                 onClick={() => handleAccessCheck(true, () => { // This is a premium document
                   generateAILiteracyGuidePDF(latestAssessment ? {
@@ -677,7 +677,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
               >
                 {purchaseLoading || generatingPDF === "literacia" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : hasPremiumAccess ? (
+                ) : hasCompliancePack ? (
                   <>
                     <Download className="h-4 w-4" />
                     Download
@@ -710,7 +710,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                 const isGenerating = generatingPDF === docType;
                 // All documents in this section are considered premium
                 const isPremiumDoc = true; 
-                const canDownload = hasPremiumAccess && !isSubscriptionEnded && !isPaymentFailed;
+                const canDownload = hasCompliancePack && !isSubscriptionEnded && !isPaymentFailed;
                 const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
                 const isDisabled = purchaseLoading || isGenerating || isLockedForBasic || !hasCompliancePack;
                 
