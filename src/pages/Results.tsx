@@ -46,34 +46,60 @@ interface QuestionData {
 
 type RiskClassification = "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO";
 
+const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
+
 const Results = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const { riskScore, questionsData, riskClassification, triggeredQuestions } = (location.state as { 
-    riskScore: RiskScore; 
-    questionsData: QuestionData[];
-    riskClassification: RiskClassification;
-    triggeredQuestions: number[];
-  }) || {};
+  const [assessmentData, setAssessmentData] = useState<any>(null); // State to hold the assessment data
   
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const hasSaved = useRef(false);
 
+  // Effect to load assessment data from location.state or localStorage
+  useEffect(() => {
+    if (location.state && !assessmentData) {
+      // Prioritize data from location.state if available
+      setAssessmentData(location.state);
+    } else if (!assessmentData) {
+      // If no data from location.state, try to load from localStorage
+      const storedData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          setAssessmentData(parsedData);
+          // The useAuth hook will clear PENDING_ASSESSMENT_KEY after saving to DB
+        } catch (e) {
+          console.error("Error parsing pending assessment from localStorage:", e);
+          localStorage.removeItem(PENDING_ASSESSMENT_KEY); // Clear invalid data
+        }
+      }
+    }
+  }, [location.state, assessmentData]);
+
+  // If no assessment data is available, redirect to assessment page
+  if (!assessmentData) {
+    return <Navigate to="/assessment" replace />;
+  }
+
+  // Destructure data from assessmentData state
+  const { riskScore, questionsData, riskClassification, triggeredQuestions } = assessmentData;
+
   const generateLegalJustification = useCallback((): string => {
-    const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
+    const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
     
     if (riskClassification === "FORA_DE_ESCOPO") {
       return "Conforme Artigo 2(5)(c) do Regulamento (UE) 2024/1689, sistemas de IA desenvolvidos ou utilizados exclusivamente para fins pessoais não profissionais estão fora do âmbito de aplicação do AI Act.";
     }
     
     if (riskClassification === "PROIBIDO") {
-      const articles = triggeredQs.map(q => q.legalReference).join(", ");
+      const articles = triggeredQs.map((q: QuestionData) => q.legalReference).join(", ");
       return `O sistema enquadra-se nas práticas de IA proibidas definidas no Artigo 5 do AI Act. Referências específicas: ${articles}. A utilização deste sistema na sua forma atual é proibida na União Europeia.`;
     }
     
     if (riskClassification === "ALTO_RISCO") {
-      const articles = triggeredQs.map(q => q.legalReference).join(", ");
+      const articles = triggeredQs.map((q: QuestionData) => q.legalReference).join(", ");
       return `O sistema é classificado como de alto risco conforme o Anexo III do Regulamento (UE) 2024/1689. Referências: ${articles}. São obrigatórias medidas de conformidade extensivas incluindo avaliação de conformidade, documentação técnica, e sistema de gestão de qualidade.`;
     }
     
@@ -100,7 +126,7 @@ const Results = () => {
       articles.add("Artigo 52 - Obrigações de Transparência");
     }
     
-    questionsData?.filter(q => q.triggersClassification).forEach(q => {
+    questionsData?.filter((q: QuestionData) => q.triggersClassification).forEach((q: QuestionData) => {
       articles.add(q.legalReference);
     });
     
@@ -240,7 +266,7 @@ const Results = () => {
       checkNewPage(50);
 
       // Triggered Questions
-      const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
+      const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
       if (triggeredQs.length > 0) {
         doc.setTextColor(15, 30, 60);
         doc.setFontSize(14);
@@ -253,7 +279,7 @@ const Results = () => {
         
         yPos += 10;
         
-        triggeredQs.forEach((q, idx) => {
+        triggeredQs.forEach((q: QuestionData, idx: number) => {
           checkNewPage(25);
           doc.setFillColor(245, 245, 245);
           doc.roundedRect(margin, yPos - 5, contentWidth, 20, 2, 2, "F");
@@ -369,7 +395,7 @@ const Results = () => {
       if (!riskScore || !questionsData || hasSaved.current) return;
       
       // If user is not logged in, data is already in localStorage (saved in Assessment.tsx)
-      // It will be persisted when they log in via useAuth hook
+      // It will be persisted to DB when they login/signup via useAuth hook
       if (!user) {
         return;
       }
@@ -407,7 +433,7 @@ const Results = () => {
             }
           } else {
             // Clear localStorage since we saved successfully
-            localStorage.removeItem("pending_assessment_data");
+            localStorage.removeItem(PENDING_ASSESSMENT_KEY);
             console.log("Assessment saved successfully in background");
           }
         } catch (error) {
@@ -421,10 +447,6 @@ const Results = () => {
     const timeoutId = setTimeout(saveInBackground, 100);
     return () => clearTimeout(timeoutId);
   }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
-
-  if (!riskScore || !questionsData || !riskClassification) {
-    return <Navigate to="/assessment" replace />;
-  }
 
   const riskConfig = {
     PROIBIDO: {
@@ -472,7 +494,7 @@ const Results = () => {
   const config = riskConfig[riskClassification];
   const Icon = config.icon;
 
-  const triggeredQuestionsData = questionsData.filter(q => q.triggersClassification);
+  const triggeredQuestionsData = questionsData.filter((q: QuestionData) => q.triggersClassification);
 
   const requiredDocuments = [
     {
@@ -608,7 +630,7 @@ const Results = () => {
                 <div className="mt-4">
                   <h4 className="text-sm font-semibold text-foreground mb-3">Questões Determinantes:</h4>
                   <div className="space-y-2">
-                    {triggeredQuestionsData.map((q) => (
+                    {triggeredQuestionsData.map((q: QuestionData) => (
                       <div key={q.id} className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
                         <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                           q.riskType === "prohibited" ? "text-risk-prohibited" :

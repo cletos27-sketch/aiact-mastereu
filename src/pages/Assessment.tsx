@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, CheckCircle2, HelpCircle, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth"; // Import useAuth
 
 interface Question {
   id: number;
@@ -145,6 +146,7 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Assessment = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get user from auth context
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
@@ -180,7 +182,7 @@ const Assessment = () => {
     setAnswers({ ...answers, [currentQuestion.id]: value === "yes" });
   };
 
-  const calculateRiskClassification = (): { classification: RiskClassification; score: number; triggeredQuestions: number[] } => {
+  const calculateRiskClassification = useCallback((): { classification: RiskClassification; score: number; triggeredQuestions: number[] } => {
     const prohibitedQuestions = [1, 2, 3, 4, 13];
     const highRiskQuestions = [5, 6, 7, 8, 9, 10];
     const limitedRiskQuestions = [11, 12, 14];
@@ -226,7 +228,20 @@ const Assessment = () => {
 
     // All answers are "No" -> Minimal risk
     return { classification: "RISCO_MINIMO", score: 10, triggeredQuestions: [] };
-  };
+  }, [answers]);
+
+  // New function to handle finalization of the diagnostic
+  const aoFinalizarDiagnostico = useCallback((dados: any) => {
+    // 1. Salva no "bolso" do navegador (localStorage)
+    localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(dados));
+    
+    // 2. Manda para o Login (ou Results se já logado)
+    if (user) {
+      navigate('/results', { state: dados });
+    } else {
+      navigate('/login'); 
+    }
+  }, [navigate, user]);
 
   const handleNext = () => {
     if (currentStep < questions.length - 1) {
@@ -253,8 +268,6 @@ const Assessment = () => {
         percentage: result.score,
       };
 
-      // Save assessment data to localStorage for users not logged in
-      // This will be persisted to DB when they login/signup
       const assessmentData = {
         answers, 
         riskScore, 
@@ -264,14 +277,11 @@ const Assessment = () => {
         timestamp: new Date().toISOString(),
       };
       
-      localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(assessmentData));
-      
       // Clear session storage progress since assessment is complete
       sessionStorage.removeItem("assessment_progress");
 
-      navigate("/results", { 
-        state: assessmentData
-      });
+      // Use the new function to finalize the diagnostic
+      aoFinalizarDiagnostico(assessmentData);
     }
   };
 
