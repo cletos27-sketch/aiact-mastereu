@@ -1,45 +1,26 @@
-// Shared CORS configuration for edge functions
-// Restricts Access-Control-Allow-Origin to known origins for security
+export const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigins = [
+    "https://aiact-master.eu",           // Seu domínio oficial
+    "https://aiact-mastereu.lovable.app", // O domínio do Lovable
+    "http://localhost:3000",
+    "http://localhost:5173"
+  ];
 
-// Allowed origins whitelist
-const ALLOWED_ORIGINS = [
-  "https://aiact-mastereu.lovable.app", // Seu domínio de produção
-  "https://dysoidrqyndwvadiwcrq.lovable.app", // Manter para ambiente de preview/staging se ainda em uso
-  "https://lovable.dev",
-  // "http://localhost:5173", // Remover em produção
-  // "http://localhost:8080", // Remover em produção
-  // "http://localhost:3000", // Remover em produção
-  // TODO: Adicione aqui o seu novo domínio de produção (ex: "https://seunovoapp.com")
-];
+  // Se a origem da requisição estiver na lista, usamos ela. 
+  // Se não, usamos a primeira da lista por padrão.
+  const headerOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
-// Pattern to match Lovable project preview URLs
-const LOVABLE_PREVIEW_PATTERN = /^https:\/\/[a-f0-9-]+\.lovableproject\.com$/;
-
-/**
- * Get CORS headers with origin validation
- * Only allows requests from whitelisted origins
- */
-export function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  
-  // Check if origin is in allowed list OR matches Lovable preview pattern
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) || LOVABLE_PREVIEW_PATTERN.test(origin);
-  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0]; // Fallback para o primeiro da lista se não permitido
-  
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": headerOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
-}
+};
 
-/**
- * Handle CORS preflight request
- */
-export function handleCorsPreflightRequest(req: Request): Response {
-  return new Response(null, { 
-    headers: getCorsHeaders(req),
-    status: 204 
+export const handleCorsPreflightRequest = (req: Request) => {
+  const origin = req.headers.get("origin");
+  return new Response("ok", { 
+    status: 200, 
+    headers: getCorsHeaders(origin) 
   });
-}
+};
