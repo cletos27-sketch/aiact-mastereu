@@ -528,6 +528,16 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {/* Botão de troca de idioma */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
+              >
+                <Languages className="w-4 h-4 mr-2" />
+                {language === 'pt' ? 'English' : 'Português'}
+              </Button>
+
               {/* Refresh Access Button - always visible */}
               <Button 
                 variant="outline" 
@@ -750,14 +760,14 @@ const Dashboard = () => {
                 {systemAnnouncements.map((announcement) => {
                   const getAnnouncementIcon = (type: string) => {
                     switch (type) {
-                      case "urgent":
-                        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-                      case "update":
-                        return <Info className="w-4 h-4 text-blue-500" />;
-                      case "maintenance":
-                        return <Settings className="w-4 h-4 text-amber-500" />;
+                      case "regulation":
+                        return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+                      case "template":
+                        return <FileText className="w-4 h-4 text-green-500" />;
+                      case "warning":
+                        return <ShieldAlert className="w-4 h-4 text-red-500" />;
                       default:
-                        return <Bell className="w-4 h-4 text-primary" />;
+                        return <Info className="w-4 h-4 text-blue-500" />;
                     }
                   };
                   
@@ -856,12 +866,12 @@ const Dashboard = () => {
                   
                   const getUpdateBadge = (type: string) => {
                     switch (type) {
-                      case "regulation":
-                        return { bg: "bg-amber-500/10", text: "text-amber-500", label: "Regulação" };
-                      case "template":
-                        return { bg: "bg-green-500/10", text: "text-green-500", label: "Template" };
-                      case "warning":
-                        return { bg: "bg-red-500/10", text: "text-red-500", label: "Alerta" };
+                      case "urgent":
+                        return { bg: "bg-red-500/10", text: "text-red-500", label: "Urgente" };
+                      case "update":
+                        return { bg: "bg-blue-500/10", text: "text-blue-500", label: "Atualização" };
+                      case "maintenance":
+                        return { bg: "bg-amber-500/10", text: "text-amber-500", label: "Manutenção" };
                       default:
                         return { bg: "bg-blue-500/10", text: "text-blue-500", label: "Info" };
                     }
@@ -876,7 +886,7 @@ const Dashboard = () => {
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          {getUpdateIcon(update.update_type)}
+                          {getUpdateIcon(update.type)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -1168,11 +1178,11 @@ const Dashboard = () => {
                                 : "text-foreground"
                           }`}
                         >
-                          {task.task}
+                          {language === 'pt' ? task.task : (task.task_en || task.task)}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
-                            {task.category}
+                            {language === 'pt' ? task.category : (task.category_en || task.category)}
                           </span>
                           {isLocked && (
                             <span className="text-xs px-1.5 py-0.5 bg-gold/10 text-gold rounded">
