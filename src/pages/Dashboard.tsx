@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Header from "../components/layout/Header";
+import { Button } from "../components/ui/button";
+import { Progress } from "../components/ui/progress";
+import { Checkbox } from "../components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
 import DocumentsModal from "@/components/dashboard/DocumentsModal"; // Import the extracted component
