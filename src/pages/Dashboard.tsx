@@ -39,9 +39,9 @@ import {
   RefreshCw,
   Languages, // Importar o ícone de idiomas
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Import shared types
-import { documentPDFContent } from "@/lib/documentTemplates"; // Import document content
+import { useAuth } from "../hooks/useAuth";
+import { RiskAssessment, DocumentType } from "../types/dashboard"; // Import shared types
+import { documentPDFContent } from "../lib/documentTemplates"; // Import document content
 
 // Types for system updates
 interface SystemUpdate {
