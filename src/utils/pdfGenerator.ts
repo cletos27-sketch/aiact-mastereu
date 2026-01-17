@@ -73,3 +73,40 @@ export const exportToPDF = (userEmail: string, answers: any[]) => {
 
   doc.save(`AIACT_Master_Compliance_Report_${date.replace(/\//g, '-')}.pdf`); // Nome do arquivo atualizado
 };
+
+export const generateComplianceBadge = (riskLevel: string) => {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [80, 50] // Tamanho de um cartão/badge
+  });
+
+  const isSafe = riskLevel.includes('MINIMAL') || riskLevel.includes('LOW');
+  const color = isSafe ? [0, 128, 0] : [255, 140, 0]; // Verde ou Laranja
+
+  // Fundo
+  doc.setFillColor(245, 245, 245);
+  doc.rect(0, 0, 80, 50, 'F');
+
+  // Borda colorida
+  doc.setDrawColor(color[0], color[1], color[2]);
+  doc.setLineWidth(2);
+  doc.rect(2, 2, 76, 46);
+
+  // Texto do Selo
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('EU AI ACT PRE-ASSESSMENT', 40, 15, { align: 'center' });
+
+  doc.setFontSize(12);
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.setFont('helvetica', 'bold');
+  doc.text(riskLevel, 40, 28, { align: 'center' });
+
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Verified by AIACT Master', 40, 42, { align: 'center' });
+
+  doc.save('AI_Compliance_Badge.pdf');
+};
