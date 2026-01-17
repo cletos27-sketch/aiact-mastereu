@@ -584,7 +584,7 @@ Isso geralmente acontece quando o `tsconfig.json` principal do projeto (não o d
 
 Vou corrigir o `tsconfig.json` principal do projeto para incluir o mapeamento de caminhos para `@/`.
 
-<dyad-write path="tsconfig.json" description="Atualizando tsconfig.json para incluir o mapeamento de caminhos para o alias '@/' e resolver erros de importação.">
+< path="tsconfig.json" description="Atualizando tsconfig.json para incluir o mapeamento de caminhos para o alias '@/' e resolver erros de importação.">
 {
   "compilerOptions": {
     "target": "ES2020",
