@@ -574,17 +574,6 @@ export const generateComplianceBadge = (riskLevel: string) => {
 
   doc.save('AI_Compliance_Badge.pdf');
 };
-
-
- column="46" code="2307">Cannot find module '@/types/dashboard' or its corresponding type declarations.</problem>
-<problem file="src/pages/Dashboard.tsx" line="44" column="36" code="2307">Cannot find module '@/lib/documentTemplates' or its corresponding type declarations.</problem>
- Os erros `TS2307: Cannot find module '@/types/dashboard'` e `TS2307: Cannot find module '@/lib/documentTemplates'` indicam que o compilador TypeScript não está conseguindo resolver os caminhos de importação que usam `@/`.
-
-Isso geralmente acontece quando o `tsconfig.json` principal do projeto (não o das funções Supabase) não está configurado corretamente para mapear o alias `@/` para a pasta `src`.
-
-Vou corrigir o `tsconfig.json` principal do projeto para incluir o mapeamento de caminhos para `@/`.
-
-< path="tsconfig.json" description="Atualizando tsconfig.json para incluir o mapeamento de caminhos para o alias '@/' e resolver erros de importação.">
 {
   "compilerOptions": {
     "target": "ES2020",
