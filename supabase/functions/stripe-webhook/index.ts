@@ -1,3 +1,8 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="deno.window" />
+/// <reference types="https://esm.sh/stripe@18.5.0" />
+/// <reference types="https://esm.sh/@supabase/supabase-js@2.57.2" />
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -7,8 +12,8 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Product ID for Compliance Pack (TEST MODE)
-const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
+// Product ID for Compliance Pack (LIVE MODE)
+const VALID_PRODUCT_ID = "prod_TlXNDRDgiLZ09U";
 
 // Valid statuses for purchases
 // "paid" = successful one-time payment
@@ -18,15 +23,22 @@ const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
 // "pending" = awaiting payment
 type PurchaseStatus = "paid" | "active" | "canceled" | "payment_failed" | "pending";
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     logStep("Webhook received");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    if (!stripeKey) {
+      logStep("ERROR: STRIPE_SECRET_KEY is not set");
+      return new Response(JSON.stringify({ error: "Stripe secret key not set" }), { status: 500 });
+    }
+    if (!webhookSecret) {
+      logStep("ERROR: STRIPE_WEBHOOK_SECRET is not set");
+      return new Response(JSON.stringify({ error: "Stripe webhook secret not set" }), { status: 500 });
+    }
+    logStep("Stripe keys verified");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
@@ -36,14 +48,6 @@ serve(async (req) => {
     let event: Stripe.Event;
 
     // SECURITY: Webhook signature verification is REQUIRED
-    if (!webhookSecret) {
-      logStep("ERROR: STRIPE_WEBHOOK_SECRET is not configured");
-      return new Response(
-        JSON.stringify({ error: "Webhook signature verification required - STRIPE_WEBHOOK_SECRET not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
     if (!signature) {
       logStep("ERROR: Missing stripe-signature header");
       return new Response(
@@ -66,11 +70,15 @@ serve(async (req) => {
 
     logStep("Processing event", { type: event.type, id: event.id });
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      logStep("ERROR: Missing Supabase environment variables for admin client");
+      return new Response(JSON.stringify({ error: "Missing Supabase environment variables" }), { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } });
 
     // Helper function to find user by email
     const findUserByEmail = async (email: string) => {
@@ -245,8 +253,8 @@ serve(async (req) => {
               stripe_customer_id: customerId,
             },
             { 
-              onConflict: "user_id,product_id",
-              ignoreDuplicates: false 
+                onConflict: "user_id,product_id",
+                ignoreDuplicates: false 
             }
           );
 
@@ -263,83 +271,83 @@ serve(async (req) => {
           .eq("user_id", user.id);
 
         if (profileError) {
-          logStep("Error updating profile is_paid for subscription event", { error: profileError.message });
-        } else {
-          logStep("Profile is_paid updated successfully for subscription event", { userId: user.id, isPaid: newIsPaid });
+            logStep("Error updating profile is_paid for subscription event", { error: profileError.message });
+          } else {
+            logStep("Profile is_paid updated successfully for subscription event", { userId: user.id, isPaid: newIsPaid });
+          }
+          break;
         }
-        break;
+  
+        case "invoice.payment_failed": {
+          const invoice = event.data.object as Stripe.Invoice;
+          const customerId = invoice.customer as string;
+          
+          logStep("Processing invoice.payment_failed", { invoiceId: invoice.id, customerId });
+  
+          const customer = await stripe.customers.retrieve(customerId);
+          if (customer.deleted) {
+            logStep("Customer was deleted, skipping payment_failed update");
+            break;
+          }
+          
+          const customerEmail = (customer as Stripe.Customer).email;
+          if (!customerEmail) {
+            logStep("No customer email found for payment_failed event, skipping");
+            break;
+          }
+  
+          const user = await findUserByEmail(customerEmail);
+          if (!user) {
+            logStep("No user found with email for payment_failed event", { email: customerEmail });
+            break;
+          }
+  
+          logStep("Found user for payment_failed event", { userId: user.id });
+  
+          // Update user_purchases status to payment_failed
+          const { error: purchaseUpdateError } = await supabaseAdmin
+            .from("user_purchases")
+            .update({ 
+              status: "payment_failed",
+              updated_at: new Date().toISOString()
+            })
+            .eq("user_id", user.id)
+            .eq("product_id", VALID_PRODUCT_ID);
+  
+          if (purchaseUpdateError) {
+            logStep("Error updating purchase status to payment_failed", { error: purchaseUpdateError.message });
+          } else {
+            logStep("Purchase status updated to payment_failed", { userId: user.id });
+          }
+  
+          // Update profiles.is_paid to false
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .update({ is_paid: false, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+  
+          if (profileError) {
+            logStep("Error updating profile is_paid to false for payment_failed", { error: profileError.message });
+          } else {
+            logStep("Profile is_paid updated to false for payment_failed", { userId: user.id });
+          }
+          break;
+        }
+  
+        default:
+          logStep("Unhandled event type", { type: event.type });
       }
-
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = invoice.customer as string;
-        
-        logStep("Processing invoice.payment_failed", { invoiceId: invoice.id, customerId });
-
-        const customer = await stripe.customers.retrieve(customerId);
-        if (customer.deleted) {
-          logStep("Customer was deleted, skipping payment_failed update");
-          break;
-        }
-        
-        const customerEmail = (customer as Stripe.Customer).email;
-        if (!customerEmail) {
-          logStep("No customer email found for payment_failed event, skipping");
-          break;
-        }
-
-        const user = await findUserByEmail(customerEmail);
-        if (!user) {
-          logStep("No user found with email for payment_failed event", { email: customerEmail });
-          break;
-        }
-
-        logStep("Found user for payment_failed event", { userId: user.id });
-
-        // Update user_purchases status to payment_failed
-        const { error: purchaseUpdateError } = await supabaseAdmin
-          .from("user_purchases")
-          .update({ 
-            status: "payment_failed",
-            updated_at: new Date().toISOString()
-          })
-          .eq("user_id", user.id)
-          .eq("product_id", VALID_PRODUCT_ID);
-
-        if (purchaseUpdateError) {
-          logStep("Error updating purchase status to payment_failed", { error: purchaseUpdateError.message });
-        } else {
-          logStep("Purchase status updated to payment_failed", { userId: user.id });
-        }
-
-        // Update profiles.is_paid to false
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .update({ is_paid: false, updated_at: new Date().toISOString() })
-          .eq("user_id", user.id);
-
-        if (profileError) {
-          logStep("Error updating profile is_paid to false for payment_failed", { error: profileError.message });
-        } else {
-          logStep("Profile is_paid updated to false for payment_failed", { userId: user.id });
-        }
-        break;
-      }
-
-      default:
-        logStep("Unhandled event type", { type: event.type });
+  
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logStep("ERROR in stripe-webhook", { message: errorMessage });
+      return new Response(JSON.stringify({ error: errorMessage }), {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      });
     }
-
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in stripe-webhook", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
-  }
-});
+  });

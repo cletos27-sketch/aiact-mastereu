@@ -1,3 +1,8 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="deno.window" />
+/// <reference types="https://esm.sh/stripe@18.5.0" />
+/// <reference types="https://esm.sh/@supabase/supabase-js@2.57.2" />
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -8,13 +13,13 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
-// Valid price configurations (TEST MODE)
+// Valid price configurations (LIVE MODE)
 const VALID_PRICES = {
-  "price_1Snqs8IV86RXPoUIDO9x8pWp": { mode: "payment", product_id: "prod_TlNdrEbFfZcfIg", plan_type: "premium" }, // 499€ one-time
-  "price_1Snqs8IV86RXPoUIUHrXN5fI": { mode: "subscription", product_id: "prod_TlNdrEbFfZcfIg", plan_type: "monthly" }, // 99€/month
+  "price_1So0IyIV86RXPoUIiR2PXhM5": { mode: "payment", product_id: "prod_TlXNDRDgiLZ09U", plan_type: "premium" }, // 499€ one-time
+  "price_1So0IyIV86RXPoUIweuHHwNB": { mode: "subscription", product_id: "prod_TlXNDRDgiLZ09U", plan_type: "monthly" }, // 99€/month
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
@@ -22,11 +27,19 @@ serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(req);
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+
+  if (!supabaseUrl || !supabaseAnonKey || !stripeSecretKey) {
+    logStep("ERROR: Missing Supabase or Stripe environment variables");
+    return new Response(JSON.stringify({ error: "Missing environment variables" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
 
   try {
     logStep("Function started");
@@ -55,7 +68,7 @@ serve(async (req) => {
     logStep("User authenticated", { userId });
 
     // Parse request body for price_id
-    let price_id = "price_1Snqs8IV86RXPoUIDO9x8pWp"; // default to one-time payment (TEST MODE)
+    let price_id = "price_1So0IyIV86RXPoUIiR2PXhM5"; // default to one-time payment (LIVE MODE)
     try {
       const body = await req.json();
       if (body.price_id && VALID_PRICES[body.price_id as keyof typeof VALID_PRICES]) {
@@ -67,7 +80,10 @@ serve(async (req) => {
 
     const priceConfig = VALID_PRICES[price_id as keyof typeof VALID_PRICES];
     if (!priceConfig) {
-      throw new Error("Invalid price_id provided");
+      throw new Response(JSON.stringify({ error: "Invalid price_id provided" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     // Use plan_type directly from priceConfig
@@ -75,7 +91,7 @@ serve(async (req) => {
 
     logStep("Price selected", { price_id, mode: priceConfig.mode, plan_type });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2025-08-27.basil",
     });
 
@@ -87,7 +103,7 @@ serve(async (req) => {
       logStep("Found existing Stripe customer", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://aiact-mastereu.lovable.app"; // Updated fallback to production domain
+    const origin = req.headers.get("origin") || "https://aiact-master.eu"; // Updated fallback to production domain
 
     // Create checkout session with appropriate mode
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {

@@ -8,7 +8,7 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CUSTOMER-PORTAL] ${step}${detailsStr}`);
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
@@ -16,17 +16,22 @@ serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(req);
 
+  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!stripeKey || !supabaseUrl || !supabaseAnonKey) {
+    logStep("ERROR: Missing Stripe or Supabase environment variables");
+    return new Response(JSON.stringify({ error: "Missing environment variables" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
@@ -49,7 +54,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "https://aiact-mastereu.lovable.app"; // Updated fallback to production domain
+    const origin = req.headers.get("origin") || "https://aiact-master.eu"; // Updated fallback to production domain
     
     // Create billing portal session with configuration for easy cancellation
     // EU Digital Fairness Act 2026 compliant - no dark patterns

@@ -8,7 +8,7 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[VERIFY-PAYMENT] ${step}${detailsStr}`);
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
@@ -16,16 +16,21 @@ serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(req);
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
+  if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey || !stripeSecretKey) {
+    logStep("ERROR: Missing Supabase or Stripe environment variables");
+    return new Response(JSON.stringify({ error: "Missing environment variables" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } });
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
   try {
     logStep("Function started");
@@ -34,7 +39,11 @@ serve(async (req) => {
     if (!authHeader) throw new Error("No authorization header provided");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError) {
+      logStep("Authentication error", { error: authError.message });
+      throw new Error(`Authentication error: ${authError.message}`);
+    }
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
@@ -43,7 +52,7 @@ serve(async (req) => {
     if (!session_id) throw new Error("No session_id provided");
     logStep("Verifying session", { session_id });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2025-08-27.basil",
     });
 
@@ -101,7 +110,7 @@ serve(async (req) => {
       const lineItem = session.line_items?.data[0];
       const price = lineItem?.price;
       const priceId = price?.id || session.metadata?.price_id || "unknown";
-      const productId = typeof price?.product === "string" ? price.product : "prod_TlNdrEbFfZcfIg"; // TEST MODE product
+      const productId = typeof price?.product === "string" ? price.product : "prod_TlXNDRDgiLZ09U"; // LIVE MODE product
       const amount = session.amount_total || 0;
       const currency = session.currency || "eur";
 

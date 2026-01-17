@@ -7,10 +7,10 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CHECK-PURCHASE] ${step}${detailsStr}`);
 };
 
-// Both prices unlock the Compliance Pack (TEST MODE)
-const VALID_PRODUCT_ID = "prod_TlNdrEbFfZcfIg";
+// Product ID for Compliance Pack (LIVE MODE)
+const VALID_PRODUCT_ID = "prod_TlXNDRDgiLZ09U";
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
@@ -18,10 +18,18 @@ serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(req);
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    logStep("ERROR: Missing Supabase environment variables");
+    return new Response(JSON.stringify({ error: "Missing environment variables" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
   try {
     logStep("Function started");
@@ -30,7 +38,11 @@ serve(async (req) => {
     if (!authHeader) throw new Error("No authorization header provided");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError) {
+      logStep("Authentication error", { error: authError.message });
+      throw new Error(`Authentication error: ${authError.message}`);
+    }
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
