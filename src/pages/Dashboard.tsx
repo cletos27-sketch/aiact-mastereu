@@ -5,16 +5,16 @@ import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { Checkbox } from "../components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
-import SettingsModal from "@/components/dashboard/SettingsModal";
-import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
-import DocumentsModal from "@/components/dashboard/DocumentsModal"; // Import the extracted component
+import SettingsModal from "../components/dashboard/SettingsModal";
+import AssessmentHistory from "../components/dashboard/AssessmentHistory";
+import DocumentsModal from "../components/dashboard/DocumentsModal"; // Import the extracted component
 import { PopupModal } from "react-calendly";
 import { jsPDF } from "jspdf";
-import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
-import { supabase } from "@/integrations/supabase/client";
-import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
-import { useTaskProgress } from "@/hooks/useTaskProgress";
-import PricingCards from "@/components/PricingCards";
+import { generateAILiteracyGuidePDF } from "../lib/generateAILiteracyGuidePDF";
+import { supabase } from "../integrations/supabase/client";
+import { usePurchaseStatus } from "../hooks/usePurchaseStatus";
+import { useTaskProgress } from "../hooks/useTaskProgress";
+import PricingCards from "../components/PricingCards";
 import { toast } from "sonner";
 import {
   Bell,
