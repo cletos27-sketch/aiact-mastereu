@@ -50,6 +50,8 @@ export type Database = {
           is_paid: boolean
           updated_at: string
           user_id: string
+          full_name: string | null
+          company_name: string | null
         }
         Insert: {
           created_at?: string
@@ -58,6 +60,8 @@ export type Database = {
           is_paid?: boolean
           updated_at?: string
           user_id: string
+          full_name?: string | null
+          company_name?: string | null
         }
         Update: {
           created_at?: string
@@ -66,6 +70,8 @@ export type Database = {
           is_paid?: boolean
           updated_at?: string
           user_id?: string
+          full_name?: string | null
+          company_name?: string | null
         }
         Relationships: []
       }

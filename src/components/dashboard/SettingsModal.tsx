@@ -20,8 +20,8 @@ interface SettingsModalProps {
 }
 
 interface ProfileData {
-  full_name: string;
-  company_name: string;
+  full_name: string | null;
+  company_name: string | null;
   email: string;
 }
 
@@ -124,7 +124,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               </Label>
               <Input
                 id="full_name"
-                value={profile.full_name}
+                value={profile.full_name || ""}
                 onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                 placeholder="Seu nome completo"
               />
@@ -137,7 +137,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               </Label>
               <Input
                 id="company_name"
-                value={profile.company_name}
+                value={profile.company_name || ""}
                 onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
                 placeholder="Nome da sua empresa"
               />
