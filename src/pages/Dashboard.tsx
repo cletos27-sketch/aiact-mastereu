@@ -1226,7 +1226,7 @@ const Dashboard = () => {
                 onClick={() => setCalendlyOpen(true)}
                 className="flex items-center gap-2"
               >
-                <Calendar className="h-4 w-4" />
+                <Calendar className="w-4 h-4" />
                 Agendar Consultoria
               </Button>
             </div>

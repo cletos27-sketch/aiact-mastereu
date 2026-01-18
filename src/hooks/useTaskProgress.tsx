@@ -1,83 +1,42 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./useAuth";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
-// Define the checklist items with unique keys
-// Premium tasks require the Compliance Pack (499€) to be unlocked
-export const CHECKLIST_ITEMS = [
-  {
-    key: "diagnostico_risco",
-    task: "Realizar diagnóstico de classificação de risco",
-    category: "Identificação",
-    premium: false,
-  },
-  {
-    key: "politica_transparencia",
-    task: "Criar Política de Transparência",
-    category: "Documentação",
-    premium: true,
-  },
-  {
-    key: "logs_auditoria",
-    task: "Implementar sistema de logs de auditoria",
-    category: "Técnico",
-    premium: true,
-  },
-  {
-    key: "treinar_literacia",
-    task: "Treinar equipe em Literacia de IA (Artigo 4)",
-    category: "Treinamento",
-    premium: true,
-  },
-  {
-    key: "documentar_arquitetura",
-    task: "Documentar arquitetura técnica do sistema",
-    category: "Documentação",
-    premium: true,
-  },
-  {
-    key: "avaliacao_impacto",
-    task: "Realizar avaliação de impacto",
-    category: "Análise",
-    premium: true,
-  },
-  {
-    key: "supervisao_humana",
-    task: "Definir processos de supervisão humana",
-    category: "Governança",
-    premium: true,
-  },
-  {
-    key: "testar_vieses",
-    task: "Testar sistema para vieses e discriminação",
-    category: "Técnico",
-    premium: false,
-  },
-];
-
-export interface TaskState {
+interface Task {
   key: string;
   task: string;
+  task_en?: string;
   category: string;
-  completed: boolean;
-  loading: boolean;
+  category_en?: string;
   premium: boolean;
 }
+
+interface TaskState extends Task {
+  completed: boolean;
+  loading: boolean;
+}
+
+const initialTasks: Task[] = [
+  { key: 'define_purpose', task: 'Definir a finalidade do sistema de IA', task_en: 'Define the purpose of the AI system', category: 'Governança', category_en: 'Governance', premium: false },
+  { key: 'classify_risk', task: 'Classificar o nível de risco do sistema', task_en: 'Classify the risk level of the system', category: 'Avaliação de Risco', category_en: 'Risk Assessment', premium: false },
+  { key: 'implement_qms', task: 'Implementar Sistema de Gestão de Qualidade (QMS)', task_en: 'Implement Quality Management System (QMS)', category: 'Alto Risco', category_en: 'High-Risk', premium: true },
+  { key: 'technical_docs', task: 'Preparar documentação técnica (Anexo IV)', task_en: 'Prepare technical documentation (Annex IV)', category: 'Alto Risco', category_en: 'High-Risk', premium: true },
+  { key: 'conformity_assessment', task: 'Realizar avaliação de conformidade', task_en: 'Conduct conformity assessment', category: 'Alto Risco', category_en: 'High-Risk', premium: true },
+  { key: 'register_eu_db', task: 'Registar o sistema na base de dados da UE', task_en: 'Register the system in the EU database', category: 'Alto Risco', category_en: 'High-Risk', premium: true },
+  { key: 'human_oversight', task: 'Estabelecer supervisão humana', task_en: 'Establish human oversight', category: 'Governança', category_en: 'Governance', premium: true },
+  { key: 'transparency_obligations', task: 'Cumprir obrigações de transparência', task_en: 'Fulfill transparency obligations', category: 'Transparência', category_en: 'Transparency', premium: false },
+  { key: 'data_governance', task: 'Implementar governança de dados', task_en: 'Implement data governance', category: 'Dados', category_en: 'Data', premium: true },
+  { key: 'log_capabilities', task: 'Garantir capacidades de logging', task_en: 'Ensure logging capabilities', category: 'Técnico', category_en: 'Technical', premium: true },
+];
 
 export const useTaskProgress = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<TaskState[]>(
-    CHECKLIST_ITEMS.map((item) => ({
-      ...item,
-      completed: false,
-      loading: false,
-      premium: item.premium,
-    }))
+    initialTasks.map(task => ({ ...task, completed: false, loading: false }))
   );
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Load initial task states from database
-  const loadTasks = useCallback(async () => {
+  const fetchProgress = useCallback(async () => {
     if (!user) {
       setInitialLoading(false);
       return;
@@ -85,112 +44,71 @@ export const useTaskProgress = () => {
 
     try {
       const { data, error } = await supabase
-        .from("user_tasks")
-        .select("task_key, completed")
-        .eq("user_id", user.id);
+        .from('user_task_progress')
+        .select('task_key, completed')
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error("Error loading tasks:", error);
-        return;
-      }
+      if (error) throw error;
 
-      // Create a map of task_key -> completed status
-      const completedMap = new Map<string, boolean>();
-      data?.forEach((row) => {
-        completedMap.set(row.task_key, row.completed);
-      });
-
-      // Update tasks state with database values
-      setTasks((prev) =>
-        prev.map((task) => ({
-          ...task,
-          completed: completedMap.get(task.key) ?? false,
-          loading: false,
-        }))
+      setTasks(currentTasks =>
+        currentTasks.map(task => {
+          const savedTask = data.find(d => d.task_key === task.key);
+          return { ...task, completed: savedTask ? savedTask.completed : false };
+        })
       );
     } catch (error) {
-      console.error("Error loading tasks:", error);
+      console.error('Error fetching task progress:', error);
     } finally {
       setInitialLoading(false);
     }
   }, [user]);
 
-  // Load tasks on mount and when user changes
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    fetchProgress();
+  }, [fetchProgress]);
 
-  // Toggle a task's completion status with optimistic update
-  const toggleTask = useCallback(
-    async (taskKey: string) => {
-      if (!user) return;
+  const toggleTask = async (taskKey: string) => {
+    if (!user) return;
 
-      // Find the current task
-      const currentTask = tasks.find((t) => t.key === taskKey);
-      if (!currentTask) return;
+    const taskIndex = tasks.findIndex(t => t.key === taskKey);
+    if (taskIndex === -1) return;
 
-      const newCompleted = !currentTask.completed;
+    const task = tasks[taskIndex];
+    const newCompletedState = !task.completed;
 
-      // Optimistic update - set loading and new value
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.key === taskKey
-            ? { ...task, completed: newCompleted, loading: true }
-            : task
-        )
+    setTasks(currentTasks =>
+      currentTasks.map(t => (t.key === taskKey ? { ...t, loading: true } : t))
+    );
+
+    try {
+      const { error } = await supabase
+        .from('user_task_progress')
+        .upsert(
+          { user_id: user.id, task_key: taskKey, completed: newCompletedState },
+          { onConflict: 'user_id, task_key' }
+        );
+
+      if (error) throw error;
+
+      setTasks(currentTasks =>
+        currentTasks.map(t => (t.key === taskKey ? { ...t, completed: newCompletedState } : t))
       );
+    } catch (error) {
+      console.error('Error updating task progress:', error);
+      // Revert UI on error
+      setTasks(currentTasks =>
+        currentTasks.map(t => (t.key === taskKey ? { ...t, completed: task.completed } : t))
+      );
+    } finally {
+      setTasks(currentTasks =>
+        currentTasks.map(t => (t.key === taskKey ? { ...t, loading: false } : t))
+      );
+    }
+  };
 
-      try {
-        // Upsert the task status in database
-        const { error } = await supabase.from("user_tasks").upsert(
-          {
-            user_id: user.id,
-            task_key: taskKey,
-            completed: newCompleted,
-          },
-          {
-            onConflict: "user_id,task_key",
-          }
-        );
-
-        if (error) {
-          console.error("Error saving task:", error);
-          // Revert on error
-          setTasks((prev) =>
-            prev.map((task) =>
-              task.key === taskKey
-                ? { ...task, completed: !newCompleted, loading: false }
-                : task
-            )
-          );
-          return;
-        }
-
-        // Success - remove loading state
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.key === taskKey ? { ...task, loading: false } : task
-          )
-        );
-      } catch (error) {
-        console.error("Error saving task:", error);
-        // Revert on error
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.key === taskKey
-              ? { ...task, completed: !newCompleted, loading: false }
-              : task
-          )
-        );
-      }
-    },
-    [user, tasks]
-  );
-
-  // Calculate progress
-  const completedCount = tasks.filter((t) => t.completed).length;
+  const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
-  const progressPercentage = (completedCount / totalCount) * 100;
+  const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return {
     tasks,
@@ -199,6 +117,5 @@ export const useTaskProgress = () => {
     completedCount,
     totalCount,
     progressPercentage,
-    refresh: loadTasks,
   };
 };

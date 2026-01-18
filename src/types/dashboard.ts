@@ -1,22 +1,18 @@
-export interface RiskCategory {
+export interface RiskAssessment {
   id: string;
-  name: string;
-  name_en?: string;
-  description: string;
-  risk_level: 'unacceptable' | 'high' | 'medium' | 'low';
+  risk_classification: string;
+  risk_score: number;
+  created_at: string;
+  legal_justification: string | null;
+  relevant_articles: string[] | null;
+  priority_actions: string[] | null;
+  responses: unknown;
 }
 
-export interface RiskQuestion {
-  id: string;
-  category_id: string;
-  question_text: string;
-  question_text_en?: string;
-  explanation: string;
-  explanation_en?: string;
-  legal_reference: string;
-}
-
-export interface UserAnswer {
-  question_id: string;
-  value: boolean;
-}
+export type DocumentType = 
+  | "transparencia"
+  | "logs"
+  | "tecnica"
+  | "literacia"
+  | "impacto"
+  | "supervisao";
