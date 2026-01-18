@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import Header from "../components/layout/Header";
-import { Button } from "../components/ui/button";
-import { Progress } from "../components/ui/progress";
-import { Checkbox } from "../components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
-import SettingsModal from "../components/dashboard/SettingsModal";
-import AssessmentHistory from "../components/dashboard/AssessmentHistory";
-import DocumentsModal from "../components/dashboard/DocumentsModal"; // Import the extracted component
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import SettingsModal from "@/components/dashboard/SettingsModal";
+import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
+import DocumentsModal from "@/components/dashboard/DocumentsModal"; // Import the extracted component
 import { PopupModal } from "react-calendly";
 import { jsPDF } from "jspdf";
-import { generateAILiteracyGuidePDF } from "../lib/generateAILiteracyGuidePDF";
-import { supabase } from "../integrations/supabase/client";
-import { usePurchaseStatus } from "../hooks/usePurchaseStatus";
-import { useTaskProgress } from "../hooks/useTaskProgress";
-import PricingCards from "../components/PricingCards";
+import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
+import { supabase } from "@/integrations/supabase/client";
+import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
+import { useTaskProgress } from "@/hooks/useTaskProgress";
+import PricingCards from "@/components/PricingCards";
 import { toast } from "sonner";
 import {
   Bell,
@@ -39,15 +39,17 @@ import {
   RefreshCw,
   Languages, // Importar o ícone de idiomas
 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
-import { RiskAssessment, DocumentType } from "../types/dashboard"; // Import shared types
-import { documentPDFContent } from "../lib/documentTemplates"; // Import document content
+import { useAuth } from "@/hooks/useAuth";
+import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Import shared types
+import { documentPDFContent } from "@/lib/documentTemplates"; // Import document content
 
 // Types for system updates
 interface SystemUpdate {
   id: string;
   title: string;
+  title_en?: string; // Adicionado para tradução
   content: string;
+  content_en?: string; // Adicionado para tradução
   update_type: string;
   priority: number;
   published_at: string;
@@ -57,7 +59,9 @@ interface SystemUpdate {
 interface SystemAnnouncement {
   id: string;
   title: string;
+  title_en?: string; // Adicionado para tradução
   content: string;
+  content_en?: string; // Adicionado para tradução
   announcement_type: string;
   priority: number;
   published_at: string;
@@ -798,17 +802,17 @@ const Dashboard = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium text-sm text-foreground">
-                              {announcement.title}
+                              {language === 'pt' ? announcement.title : (announcement.title_en || announcement.title)}
                             </h4>
                             <span className={`px-2 py-0.5 text-xs font-medium rounded ${badge.bg} ${badge.text}`}>
                               {badge.label}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2">
-                            {announcement.content}
+                            {language === 'pt' ? announcement.content : (announcement.content_en || announcement.content)}
                           </p>
                           <p className="text-xs text-muted-foreground/70 mt-2">
-                            {new Date(announcement.published_at).toLocaleDateString("pt-BR", {
+                            {new Date(announcement.published_at).toLocaleDateString(language === 'pt' ? "pt-BR" : "en-US", {
                               day: "numeric",
                               month: "long",
                               year: "numeric",
@@ -866,12 +870,12 @@ const Dashboard = () => {
                   
                   const getUpdateBadge = (type: string) => {
                     switch (type) {
-                      case "urgent":
-                        return { bg: "bg-red-500/10", text: "text-red-500", label: "Urgente" };
-                      case "update":
-                        return { bg: "bg-blue-500/10", text: "text-blue-500", label: "Atualização" };
-                      case "maintenance":
-                        return { bg: "bg-amber-500/10", text: "text-amber-500", label: "Manutenção" };
+                      case "regulation":
+                        return { bg: "bg-amber-500/10", text: "text-amber-500", label: "Regulação" };
+                      case "template":
+                        return { bg: "bg-green-500/10", text: "text-green-500", label: "Template" };
+                      case "warning":
+                        return { bg: "bg-red-500/10", text: "text-red-500", label: "Alerta" };
                       default:
                         return { bg: "bg-blue-500/10", text: "text-blue-500", label: "Info" };
                     }
@@ -886,22 +890,22 @@ const Dashboard = () => {
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          {getUpdateIcon(update.type)}
+                          {getUpdateIcon(update.update_type)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium text-sm text-foreground">
-                              {update.title}
+                              {language === 'pt' ? update.title : (update.title_en || update.title)}
                             </h4>
                             <span className={`px-2 py-0.5 text-xs font-medium rounded ${badge.bg} ${badge.text}`}>
                               {badge.label}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2">
-                            {update.content}
+                            {language === 'pt' ? update.content : (update.content_en || update.content)}
                           </p>
                           <p className="text-xs text-muted-foreground/70 mt-2">
-                            {new Date(update.published_at).toLocaleDateString("pt-BR", {
+                            {new Date(update.published_at).toLocaleDateString(language === 'pt' ? "pt-BR" : "en-US", {
                               day: "numeric",
                               month: "long",
                               year: "numeric",
