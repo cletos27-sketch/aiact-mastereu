@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // Import useRef
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -159,6 +159,12 @@ const Dashboard = () => {
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
   const [language, setLanguage] = useState<'pt' | 'en'>('pt'); // Estado de idioma
+
+  const rootElementRef = useRef<HTMLElement | null>(null); // Ref para o elemento root
+
+  useEffect(() => {
+    rootElementRef.current = document.getElementById("root");
+  }, []);
 
   const handleAccessCheck = (isPremiumDoc: boolean, downloadFn: () => void) => {
     if (isSubscriptionEnded || isCanceled) {
@@ -1226,19 +1232,21 @@ const Dashboard = () => {
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
       <DocumentsModal open={documentsOpen} onOpenChange={setDocumentsOpen} />
       
-      <PopupModal
-        url="https://calendly.com/cletoguarda/30min"
-        onModalClose={() => setCalendlyOpen(false)}
-        open={calendlyOpen}
-        rootElement={document.getElementById("root") as HTMLElement}
-        pageSettings={{
-          backgroundColor: "0c1929",
-          hideEventTypeDetails: false,
-          hideLandingPageDetails: false,
-          primaryColor: "d4af37",
-          textColor: "f8fafc",
-        }}
-      />
+      {calendlyOpen && rootElementRef.current && ( // Renderizar condicionalmente
+        <PopupModal
+          url="https://calendly.com/cletoguarda/30min"
+          onModalClose={() => setCalendlyOpen(false)}
+          open={calendlyOpen}
+          rootElement={rootElementRef.current} // Usar o ref
+          pageSettings={{
+            backgroundColor: "0c1929",
+            hideEventTypeDetails: false,
+            hideLandingPageDetails: false,
+            primaryColor: "d4af37",
+            textColor: "f8fafc",
+          }}
+        />
+      )}
     </div>
   );
 };
