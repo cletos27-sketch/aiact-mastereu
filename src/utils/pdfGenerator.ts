@@ -1,149 +1,119 @@
 import jsPDF from 'jspdf';
+
 import autoTable from 'jspdf-autotable';
 
-export const exportToPDF = (userEmail: string, answers: any[], lang: 'pt' | 'en' = 'pt') => {
-  const doc = new jsPDF();
-  const date = new Date().toLocaleDateString(lang === 'pt' ? 'pt-PT' : 'en-GB');
 
-  const labels = {
-    pt: { 
-      title: 'Relatório de Auditoria', 
-      auditDate: 'Data do Diagnóstico:', 
-      auditorId: 'ID do Auditor:',
-      verdict: 'Veredito de Conformidade:',
-      unacceptableRisk: 'RISCO INACEITÁVEL (PROIBIDO)',
-      highRisk: 'ALTO RISCO (ANEXO III)',
-      minimalLowRisk: 'RISCO MÍNIMO',
-      assessmentCriterion: 'Critério de Avaliação',
-      result: 'Resultado',
-      legalReference: 'Ref. Legal',
-      yes: 'SIM',
-      no: 'NÃO',
-      disclaimer: 'Aviso: Este documento é uma análise automática baseada nas respostas fornecidas e não constitui aconselhamento jurídico oficial.',
-      fileName: 'AIACT_Master_Relatorio'
-    },
-    en: { 
-      title: 'Compliance Audit Report', 
-      auditDate: 'Audit Date:', 
-      auditorId: 'Auditor ID:',
-      verdict: 'Compliance Verdict:',
-      unacceptableRisk: 'UNACCEPTABLE RISK (PROHIBITED)',
-      highRisk: 'HIGH-RISK (ANNEX III)',
-      minimalLowRisk: 'MINIMAL/LOW RISK',
-      assessmentCriterion: 'Assessment Criterion',
-      result: 'Result',
-      legalReference: 'Legal Reference',
-      yes: 'YES',
-      no: 'NO',
-      disclaimer: 'Disclaimer: This document is an automated preliminary assessment based on provided answers and does not constitute official legal advice under the EU 2024/1689 Regulation.',
-      fileName: 'AIACT_Master_Compliance_Report'
+
+// Função que lê o cookie do Google Tradutor para saber o idioma atual do site
+
+const getCurrentLanguage = () => {
+
+  try {
+
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('googtrans='));
+
+    if (cookie) {
+
+      const lang = cookie.split('/').pop(); // Extrai 'en', 'es', etc.
+
+      return lang === 'en' ? 'en' : 'pt'; 
+
     }
-  };
 
-  const t = labels[lang];
+  } catch (e) {
 
-  // Cabeçalho
-  doc.setFontSize(22);
-  doc.setTextColor(20, 48, 92); // Azul Marinho Jurídico
-  doc.text(`AIACT Master: ${t.title}`, 14, 22);
-  
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`${t.auditDate} ${date}`, 14, 30);
-  doc.text(`${t.auditorId} ${userEmail}`, 14, 35);
+    console.error("Erro ao ler idioma do Google:", e);
 
-  // Linha divisória
-  doc.setLineWidth(0.5);
-  doc.line(14, 40, 196, 40);
-
-  // Determinar o nível de risco global
-  const hasUnacceptable = answers.some(a => a.category === 'cat_unacceptable' && a.value === true);
-  const hasHighRisk = answers.some(a => a.category === 'cat_high_risk' && a.value === true);
-  
-  let riskLevel = t.minimalLowRisk;
-  let color = [0, 128, 0]; // Green
-
-  if (hasUnacceptable) {
-    riskLevel = t.unacceptableRisk;
-    color = [200, 0, 0]; // Red
-  } else if (hasHighRisk) {
-    riskLevel = t.highRisk;
-    color = [255, 140, 0]; // Orange
-  } else {
-    riskLevel = t.minimalLowRisk;
-    color = [0, 128, 0]; // Green
   }
 
-  // Bloco de Veredito
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.text(t.verdict, 14, 52);
-  doc.setFontSize(16);
-  doc.setTextColor(color[0], color[1], color[2]);
-  doc.text(riskLevel, 14, 60);
+  return 'pt'; // Se não encontrar nada, o padrão é Português
 
-  // Tabela de Respostas
-  autoTable(doc, {
-    startY: 70,
-    head: [[t.assessmentCriterion, t.result, t.legalReference]],
-    body: answers.map(item => [
-      lang === 'pt' ? item.question_text : (item.question_text_en || item.question_text),
-      item.value ? t.yes : t.no,
-      item.legal_reference || 'N/A'
-    ]),
-    headStyles: { fillColor: [20, 48, 92] },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    margin: { top: 70 }
-  });
-
-  // Rodapé com aviso legal
-  const pageCount = (doc as any).internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      t.disclaimer,
-      14, 285
-    );
-  }
-
-  doc.save(`${t.fileName}_${date.replace(/\//g, '-')}.pdf`);
 };
 
-export const generateComplianceBadge = (riskLevel: string) => {
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: [80, 50] // Tamanho de um cartão/badge
+
+
+export const generatePDF = (tasks: any[]) => {
+
+  const lang = getCurrentLanguage();
+
+  const doc = new jsPDF();
+
+
+
+  // Dicionário de tradução fixo APENAS para o PDF
+
+  const content = {
+
+    pt: { 
+
+      title: "Relatório de Conformidade EU AI Act", 
+
+      col1: "Tarefa", 
+
+      col2: "Status", 
+
+      done: "Concluído", 
+
+      todo: "Pendente" 
+
+    },
+
+    en: { 
+
+      title: "EU AI Act Compliance Report", 
+
+      col1: "Task", 
+
+      col2: "Status", 
+
+      done: "Completed", 
+
+      todo: "Pending" 
+
+    }
+
+  };
+
+
+
+  const t = content[lang as keyof typeof content] || content.pt;
+
+
+
+  // Título do Documento
+
+  doc.setFontSize(18);
+
+  doc.setTextColor(15, 23, 42); // Cor Slate-900 do seu site
+
+  doc.text(t.title, 14, 22);
+
+
+
+  // Gerar a Tabela
+
+  autoTable(doc, {
+
+    startY: 30,
+
+    head: [[t.col1, t.col2]],
+
+    body: tasks.map(task => [
+
+      task.task, // Texto da tarefa vindo do banco
+
+      task.is_completed ? t.done : t.todo
+
+    ]),
+
+    headStyles: { fillColor: [15, 23, 42] }, // Cabeçalho com a cor do site
+
+    theme: 'striped'
+
   });
 
-  const isSafe = riskLevel.includes('MINIMAL') || riskLevel.includes('LOW');
-  const color = isSafe ? [0, 128, 0] : [255, 140, 0]; // Verde ou Laranja
 
-  // Fundo
-  doc.setFillColor(245, 245, 245);
-  doc.rect(0, 0, 80, 50, 'F');
 
-  // Borda colorida
-  doc.setDrawColor(color[0], color[1], color[2]);
-  doc.setLineWidth(2);
-  doc.rect(2, 2, 76, 46);
+  doc.save(`Relatorio_AI_${lang.toUpperCase()}.pdf`);
 
-  // Texto do Selo
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text('EU AI ACT PRE-ASSESSMENT', 40, 15, { align: 'center' });
-
-  doc.setFontSize(12);
-  doc.setTextColor(color[0], color[1], color[2]);
-  doc.setFont('helvetica', 'bold');
-  doc.text(riskLevel, 40, 28, { align: 'center' });
-
-  doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Verified by AIACT Master', 40, 42, { align: 'center' });
-
-  doc.save('AI_Compliance_Badge.pdf');
 };
