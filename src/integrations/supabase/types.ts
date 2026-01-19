@@ -9,71 +9,46 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      assessment_responses: {
-        Row: {
-          completed_at: string
-          compliance_score: number
-          created_at: string
-          id: string
-          responses: Json
-          risk_classification: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string
-          compliance_score?: number
-          created_at?: string
-          id?: string
-          responses: Json
-          risk_classification: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string
-          compliance_score?: number
-          created_at?: string
-          id?: string
-          responses?: Json
-          risk_classification?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
+          company_name: string | null
           created_at: string
           email: string
+          full_name: string | null
           id: string
           is_paid: boolean
-          updated_at: string
+          updated_at: string | null
           user_id: string
-          full_name: string | null
-          company_name: string | null
         }
         Insert: {
+          company_name?: string | null
           created_at?: string
           email: string
+          full_name?: string | null
           id?: string
           is_paid?: boolean
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
-          full_name?: string | null
-          company_name?: string | null
         }
         Update: {
+          company_name?: string | null
           created_at?: string
           email?: string
+          full_name?: string | null
           id?: string
           is_paid?: boolean
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
-          full_name?: string | null
-          company_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       risk_assessments: {
         Row: {
@@ -83,8 +58,9 @@ export type Database = {
           priority_actions: string[] | null
           relevant_articles: string[] | null
           responses: Json | null
-          risk_classification: string | null
-          risk_score: number | null
+          risk_classification: string
+          risk_score: number
+          updated_at: string | null
           user_email: string | null
           user_id: string
         }
@@ -95,8 +71,9 @@ export type Database = {
           priority_actions?: string[] | null
           relevant_articles?: string[] | null
           responses?: Json | null
-          risk_classification?: string | null
-          risk_score?: number | null
+          risk_classification: string
+          risk_score: number
+          updated_at?: string | null
           user_email?: string | null
           user_id: string
         }
@@ -107,8 +84,9 @@ export type Database = {
           priority_actions?: string[] | null
           relevant_articles?: string[] | null
           responses?: Json | null
-          risk_classification?: string | null
-          risk_score?: number | null
+          risk_classification?: string
+          risk_score?: number
+          updated_at?: string | null
           user_email?: string | null
           user_id?: string
         }
@@ -122,161 +100,157 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          is_canceled: boolean
+          is_payment_failed: boolean
+          is_subscription_ended: boolean
+          price_id: string
+          status: string
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_canceled?: boolean
+          is_payment_failed?: boolean
+          is_subscription_ended?: boolean
+          price_id: string
+          status: string
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_canceled?: boolean
+          is_payment_failed?: boolean
+          is_subscription_ended?: boolean
+          price_id?: string
+          status?: string
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_announcements: {
         Row: {
           announcement_type: string
           content: string
-          created_at: string
+          content_en: string | null
           id: string
           priority: number
           published_at: string
           title: string
+          title_en: string | null
         }
         Insert: {
-          announcement_type?: string
+          announcement_type: string
           content: string
-          created_at?: string
+          content_en?: string | null
           id?: string
           priority?: number
           published_at?: string
           title: string
+          title_en?: string | null
         }
         Update: {
           announcement_type?: string
           content?: string
-          created_at?: string
+          content_en?: string | null
           id?: string
           priority?: number
           published_at?: string
           title?: string
+          title_en?: string | null
         }
         Relationships: []
       }
       system_updates: {
         Row: {
           content: string
-          created_at: string
+          content_en: string | null
           id: string
           priority: number
           published_at: string
           title: string
+          title_en: string | null
           update_type: string
         }
         Insert: {
           content: string
-          created_at?: string
+          content_en?: string | null
           id?: string
           priority?: number
           published_at?: string
           title: string
-          update_type?: string
+          title_en?: string | null
+          update_type: string
         }
         Update: {
           content?: string
-          created_at?: string
+          content_en?: string | null
           id?: string
           priority?: number
           published_at?: string
           title?: string
+          title_en?: string | null
           update_type?: string
         }
         Relationships: []
       }
       user_purchases: {
         Row: {
-          amount: number | null
-          created_at: string
-          currency: string | null
-          id: string
-          price_id: string | null
-          product_id: string | null
-          purchased_at: string | null
-          status: string | null
-          stripe_customer_id: string | null
-          stripe_session_id: string | null
-          updated_at: string | null
-          user_email: string | null
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          price_id: string;
+          product_id: string;
+          status: string;
+          user_id: string;
+        };
         Insert: {
-          amount?: number | null
-          created_at?: string
-          currency?: string | null
-          id?: string
-          price_id?: string | null
-          product_id?: string | null
-          purchased_at?: string | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_session_id?: string | null
-          updated_at?: string | null
-          user_email?: string | null
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          price_id: string;
+          product_id: string;
+          status: string;
+          user_id: string;
+        };
         Update: {
-          amount?: number | null
-          created_at?: string
-          currency?: string | null
-          id?: string
-          price_id?: string | null
-          product_id?: string | null
-          purchased_at?: string | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_session_id?: string | null
-          updated_at?: string | null
-          user_email?: string | null
-          user_id?: string
-        }
+          created_at?: string;
+          id?: string;
+          price_id?: string;
+          product_id?: string;
+          status?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "user_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            foreignKeyName: "user_purchases_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-      user_task_progress: {
-        Row: {
-          completed: boolean
-          created_at: string
-          id: string
-          task_key: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed?: boolean
-          created_at?: string
-          id?: string
-          task_key: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed?: boolean
-          created_at?: string
-          id?: string
-          task_key?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_task_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+        ];
+      };
       user_tasks: {
         Row: {
           category: string
-          created_at: string
           id: string
           is_completed: boolean
           premium: boolean
@@ -285,7 +259,6 @@ export type Database = {
         }
         Insert: {
           category: string
-          created_at?: string
           id?: string
           is_completed?: boolean
           premium?: boolean
@@ -294,7 +267,6 @@ export type Database = {
         }
         Update: {
           category?: string
-          created_at?: string
           id?: string
           is_completed?: boolean
           premium?: boolean
