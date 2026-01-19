@@ -1,9 +1,10 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from "react"; // 'ReactNode' movido para ser usado
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
+import { TablesInsert } from "@/integrations/supabase/types";
 
 interface AuthContextType {
   user: User | null;
@@ -18,12 +19,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corrigido: tipagem de children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
   // Function to save pending assessment to database
   const savePendingAssessment = useCallback(async (userId: string, userEmail: string) => {
@@ -115,12 +116,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return actions;
       };
 
-      const insertData = {
+      const insertData: TablesInsert<'risk_assessments'> = {
         user_id: userId,
         user_email: userEmail,
-        responses: assessmentData.answers as unknown as Record<string, unknown>, // Alterado para salvar assessmentData.answers
-        risk_score: assessmentData.riskScore.score,
-        risk_classification: assessmentData.riskClassification,
+        responses: assessmentData.answers,
+        risk_score: assessmentData.riskScore?.score ?? 0,
+        risk_classification: assessmentData.riskClassification ?? "RISCO_MINIMO",
         legal_justification: generateLegalJustification(assessmentData.riskClassification, assessmentData.questionsData),
         relevant_articles: getRelevantArticles(assessmentData.riskClassification, assessmentData.questionsData),
         priority_actions: getPriorityActions(assessmentData.riskClassification),
@@ -128,7 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       const { error: saveError } = await supabase
         .from("risk_assessments")
-        .insert(insertData as any);
+        .insert(insertData);
 
       if (saveError) {
         console.error("Error saving pending assessment:", saveError);
@@ -226,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [ensureProfileExists, savePendingAssessment, navigate]); // Add navigate to dependency array
+  }, [ensureProfileExists, savePendingAssessment, navigate]);
 
   // Placeholder for HaveIBeenPwned check
   const checkPasswordForPwned = async (password: string): Promise<boolean> => {

@@ -1,12 +1,11 @@
-import { useEffect } from "react"; // Import useEffect
 import { Toaster } from "@/components/ui/toaster";
-import { SonnerToaster } from "@/components/ui/sonner-shadcn"; // <--- Atualizado para o novo nome
+import { SonnerToaster } from "@/components/ui/sonner-shadcn";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/hooks/useAuth"; // Import useAuth
-import { supabase } from "@/integrations/supabase/client"; // Import supabase
-import { toast } from "sonner"; // Import sonner toast
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+// import { supabase } from "@/integrations/supabase/client"; // Removido: não utilizado
+// import { toast } from "sonner"; // Removido: não utilizado
 import Index from "./pages/Index";
 import Assessment from "./pages/Assessment";
 import Results from "./pages/Results";
@@ -20,51 +19,23 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import CookieConsent from "./components/CookieConsent";
-import { usePurchaseStatus } from "./hooks/usePurchaseStatus"; // Import usePurchaseStatus
+import { usePurchaseStatus } from "./hooks/usePurchaseStatus";
 
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { user } = useAuth();
-  const { refresh: refreshPurchaseStatus } = usePurchaseStatus();
+  // const { user } = useAuth(); // Removido: não utilizado
+  // const { refresh: refreshPurchaseStatus } = usePurchaseStatus(); // Removido: não utilizado
 
-  useEffect(() => {
-    const handlePaymentSuccess = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
-
-      if (sessionId && user) {
-        try {
-          const { data, error } = await supabase.functions.invoke('verify-payment', {
-            body: { session_id: sessionId },
-          });
-
-          if (error) {
-            console.error("Payment verification error:", error);
-            toast.error("Erro ao verificar pagamento.");
-          } else if (data?.paid) {
-            toast.success("Pagamento confirmado! Acesso atualizado.");
-            await refreshPurchaseStatus();
-          }
-        } catch (error) {
-          console.error("Payment verification error:", error);
-          toast.error("Erro ao verificar pagamento.");
-        } finally {
-          // Clean up the URL
-          urlParams.delete('session_id');
-          window.history.replaceState({}, document.title, `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ''}`);
-        }
-      }
-    };
-
-    handlePaymentSuccess();
-  }, [user, refreshPurchaseStatus]);
+  // useEffect removido pois não é mais necessário aqui após a refatoração
+  // do handlePaymentSuccess para ser chamado diretamente no Dashboard.tsx
+  // e a lógica de redirecionamento do Assessment.tsx.
 
   return (
     <>
       <Toaster />
-      <SonnerToaster /> {/* <--- Usando o componente renomeado */}
+      <SonnerToaster />
       <CookieConsent />
       <Routes>
         <Route path="/" element={<Index />} />

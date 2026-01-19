@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"; // Import useRef
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
-import DocumentsModal from "@/components/dashboard/DocumentsModal"; // Import the extracted component
+import DocumentsModal from "@/components/dashboard/DocumentsModal";
 import { PopupModal } from "react-calendly";
 import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
@@ -31,24 +31,21 @@ import {
   Info,
   Loader2,
   Lock,
-  // LogOut, // Removido: não utilizado
-  // Settings, // Removido: não utilizado
   ShieldAlert,
   Users,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-// import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Removido: não utilizado
-import { documentPDFContent } from "@/lib/documentTemplates"; // Import document content
+import { documentPDFContent } from "@/lib/documentTemplates";
 
 // Types for system updates
 interface SystemUpdate {
   id: string;
   title: string;
-  title_en?: string | null; // Alterado para aceitar null
+  title_en?: string | null;
   content: string;
-  content_en?: string | null; // Alterado para aceitar null
+  content_en?: string | null;
   update_type: string;
   priority: number;
   published_at: string;
@@ -58,9 +55,9 @@ interface SystemUpdate {
 interface SystemAnnouncement {
   id: string;
   title: string;
-  title_en?: string | null; // Alterado para aceitar null
+  title_en?: string | null;
   content: string;
-  content_en?: string | null; // Alterado para aceitar null
+  content_en?: string | null;
   announcement_type: string;
   priority: number;
   published_at: string;
@@ -74,7 +71,7 @@ const documents = [
     format: "PDF",
     size: "78 KB",
     icon: FileText,
-    premium: true, // All these documents are premium
+    premium: true,
   },
   {
     id: 2,
@@ -126,12 +123,11 @@ const documents = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth(); // 'signOut' removido
   const { 
     hasCompliancePack, 
     hasPremiumAccess,
     hasBasicAccess,
-    // accessLevel, // Removido: não utilizado
     isPaymentFailed, 
     isCanceled,
     isSubscriptionEnded,
@@ -158,9 +154,9 @@ const Dashboard = () => {
   const [systemAnnouncements, setSystemAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
-  const [language] = useState<'pt' | 'en'>('pt'); // 'setLanguage' removido, 'language' mantido
+  const [language] = useState<'pt' | 'en'>('pt');
 
-  const rootElementRef = useRef<HTMLElement | null>(null); // Ref para o elemento root
+  const rootElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     rootElementRef.current = document.getElementById("root");
@@ -266,7 +262,7 @@ const Dashboard = () => {
     setGeneratingLiteracyGuide(true);
     try {
       // Fetch latest assessment for personalized content
-      if (!user?.id) { // Adicionado verificação para user.id
+      if (!user?.id) {
         console.warn("User ID is not available. Cannot fetch assessments for literacy guide.");
         setGeneratingLiteracyGuide(false);
         return;
@@ -274,7 +270,7 @@ const Dashboard = () => {
       const { data: assessments } = await supabase
         .from("risk_assessments")
         .select("*")
-        .eq("user_id", user.id) // Usando user.id diretamente
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(1);
       
@@ -410,7 +406,7 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
-    handleAccessCheck(true, () => generateQuickPDF(docId, docName)); // Todos os documentos aqui são premium
+    handleAccessCheck(true, () => generateQuickPDF(docId, docName));
   };
 
   // Redirect if not authenticated
@@ -436,7 +432,7 @@ const Dashboard = () => {
         if (error) {
           console.error("Error fetching system updates:", error);
         } else {
-          setSystemUpdates((data as SystemUpdate[]) || []); // Adicionado type assertion
+          setSystemUpdates((data as SystemUpdate[]) || []);
         }
       } catch (error) {
         console.error("Error fetching system updates:", error);
@@ -507,11 +503,6 @@ const Dashboard = () => {
 
     verifyPaymentFromUrl();
   }, [searchParams, user, refreshPurchase, setSearchParams, isVerifyingPayment]);
-
-  // const handleSignOut = async () => { // 'handleSignOut' removido: não utilizado
-  //   await signOut();
-  //   navigate("/");
-  // };
 
   if (loading || tasksLoading) {
     return (
@@ -995,7 +986,7 @@ const Dashboard = () => {
                 </div>
                 <Button 
                   variant="gold" 
-                  onClick={() => handleAccessCheck(true, handleDownloadLiteracyGuide)} // This is a premium document
+                  onClick={() => handleAccessCheck(true, handleDownloadLiteracyGuide)}
                   disabled={generatingLiteracyGuide || purchaseLoading}
                   className="flex items-center gap-2 min-w-[180px]"
                 >
@@ -1046,7 +1037,6 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {documents.map((doc) => {
                   const DocIcon = doc.icon;
-                  // const isPremiumDoc = doc.premium; // Removido: não utilizado
                   const canDownload = hasCompliancePack && !isSubscriptionEnded && !isPaymentFailed;
                   const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
                   const isDisabled = purchaseLoading || isLockedForBasic || !hasCompliancePack;
@@ -1088,7 +1078,7 @@ const Dashboard = () => {
                         variant="ghost"
                         size="sm"
                         className={`transition-opacity ${canDownload ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
-                        onClick={() => handleDocumentDownload(doc.id, doc.name)} // Chamando handleDocumentDownload
+                        onClick={() => handleDocumentDownload(doc.id, doc.name)}
                         disabled={isDisabled}
                         title={
                           isLockedForBasic 
@@ -1237,12 +1227,12 @@ const Dashboard = () => {
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
       <DocumentsModal open={documentsOpen} onOpenChange={setDocumentsOpen} />
       
-      {calendlyOpen && rootElementRef.current && ( // Renderizar condicionalmente
+      {calendlyOpen && rootElementRef.current && (
         <PopupModal
           url="https://calendly.com/cletoguarda/30min"
           onModalClose={() => setCalendlyOpen(false)}
           open={calendlyOpen}
-          rootElement={rootElementRef.current} // Usar o ref
+          rootElement={rootElementRef.current}
           pageSettings={{
             backgroundColor: "0c1929",
             hideEventTypeDetails: false,

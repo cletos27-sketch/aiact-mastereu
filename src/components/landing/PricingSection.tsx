@@ -1,12 +1,6 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button"; // Removido: não utilizado
-import { CheckCircle2 } from "lucide-react"; // Removido: não utilizado
 import PricingCards from "@/components/PricingCards";
 
 const PricingSection = () => {
-  // const navigate = useNavigate(); // Removido: não utilizado
-  // const [billingCycle, setBillingCycle] = useState("monthly"); // "monthly" | "annually" // Removido: não utilizado
-
   return (
     <section id="pricing" className="py-20 bg-background">
       <div className="container-legal text-center">
@@ -17,7 +11,7 @@ const PricingSection = () => {
           Escolha o plano que melhor se adapta à sua jornada de conformidade com o EU AI Act.
         </p>
 
-        <PricingCards hasCompliancePack={false} /> {/* hasCompliancePack é sempre false aqui */}
+        <PricingCards hasCompliancePack={false} />
 
         <p className="text-sm text-muted-foreground mt-8">
           Pagamento seguro via Stripe. Acesso imediato após confirmação.
