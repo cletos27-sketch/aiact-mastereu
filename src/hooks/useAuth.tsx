@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const insertData = {
         user_id: userId,
         user_email: userEmail,
-        responses: assessmentData.questionsData as unknown as Record<string, unknown>,
+        responses: assessmentData.answers as unknown as Record<string, unknown>, // Alterado para salvar assessmentData.answers
         risk_score: assessmentData.riskScore.score,
         risk_classification: assessmentData.riskClassification,
         legal_justification: generateLegalJustification(assessmentData.riskClassification, assessmentData.questionsData),
