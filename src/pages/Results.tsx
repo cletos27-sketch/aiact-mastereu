@@ -1,6 +1,6 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
-import { useEffect, useState, useRef, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState, useCallback } from "react"; // useRef e supabase removidos
+// import { supabase } from "@/integrations/supabase/client"; // Removido: não utilizado diretamente aqui
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -28,11 +28,11 @@ import {
   Users,
 } from "lucide-react";
 
-interface RiskScore {
-  score: number;
-  maxScore: number;
-  percentage: number;
-}
+// interface RiskScore { // Removido: não utilizado
+//   score: number;
+//   maxScore: number;
+//   percentage: number;
+// }
 
 interface QuestionData {
   id: number;
@@ -83,7 +83,7 @@ const Results = () => {
   }
 
   // Destructure data from assessmentData state
-  const { riskScore, questionsData, riskClassification, triggeredQuestions } = assessmentData;
+  const { questionsData, riskClassification } = assessmentData; // riskScore e triggeredQuestions removidos
 
   const generateLegalJustification = useCallback((): string => {
     const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
@@ -233,7 +233,7 @@ const Results = () => {
         FORA_DE_ESCOPO: [100, 116, 139]
       };
 
-      const [r, g, b] = riskColors[riskClassification];
+      const [r, g, b] = riskColors[riskClassification as RiskClassification]; // Adicionado type assertion
       
       doc.setFillColor(r, g, b);
       doc.roundedRect(margin, yPos, contentWidth, 25, 3, 3, "F");
@@ -241,7 +241,7 @@ const Results = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text(`Classificação: ${riskLabels[riskClassification]}`, pageWidth / 2, yPos + 16, { align: "center" });
+      doc.text(`Classificação: ${riskLabels[riskClassification as RiskClassification]}`, pageWidth / 2, yPos + 16, { align: "center" }); // Adicionado type assertion
 
       yPos += 40;
 
@@ -430,7 +430,7 @@ const Results = () => {
     },
   };
 
-  const config = riskConfig[riskClassification];
+  const config = riskConfig[riskClassification as RiskClassification]; // Adicionado type assertion
   const Icon = config.icon;
 
   const triggeredQuestionsData = questionsData.filter((q: QuestionData) => q.triggersClassification);

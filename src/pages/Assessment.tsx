@@ -148,7 +148,7 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Assessment = () => {
   const navigate = useNavigate();
-  const { user, session } = useAuth(); // Get user and session from auth context
+  const { session } = useAuth(); // 'user' removido da desestruturação
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);

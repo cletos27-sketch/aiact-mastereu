@@ -38,7 +38,7 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
       pdf.rect(0, isFirstPage ? 55 : 25, pageWidth, 2, "F");
     };
 
-    const addSectionTitle = (title: string, iconType?: "book" | "shield" | "alert" | "users" | "check") => {
+    const addSectionTitle = (title: string) => { // 'iconType' removido
       checkPageBreak(40);
       
       // Section background
@@ -202,7 +202,7 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
     pdf.setFontSize(10);
     pdf.text(`Data de geração: ${new Date().toLocaleDateString("pt-BR")}`, margin + 10, yPosition + 12);
     pdf.text(`Regulamento: (UE) 2024/1689 — EU AI Act`, margin + 10, yPosition + 22);
-    if (assessmentData?.risk_classification) {
+    if (assessmentData?.risk_classification) { // Adicionado optional chaining
       pdf.text(`Classificação do sistema: ${assessmentData.risk_classification} (Score: ${assessmentData.risk_score || "N/A"})`, margin + 10, yPosition + 32);
     }
     
@@ -471,11 +471,11 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
       
       addSectionTitle("7. INFORMAÇÕES DO SEU DIAGNÓSTICO DE RISCO");
       
-      if (assessmentData.risk_classification) {
+      if (assessmentData?.risk_classification) { // Adicionado optional chaining
         addParagraph(`Classificação de Risco: ${assessmentData.risk_classification} (Score: ${assessmentData.risk_score || "N/A"})`);
       }
       
-      if (assessmentData.legal_justification) {
+      if (assessmentData?.legal_justification) { // Adicionado optional chaining
         addSubsectionTitle("Justificativa Legal");
         addParagraph(assessmentData.legal_justification);
       }

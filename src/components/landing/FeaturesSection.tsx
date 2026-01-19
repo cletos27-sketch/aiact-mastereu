@@ -1,70 +1,69 @@
-import { BookOpen, ClipboardCheck, FileText, Lock, Scale, Users } from "lucide-react";
+import { LucideIcon, ShieldCheck, Zap, Lightbulb, Scale, Users, BookOpen } from "lucide-react";
 
-const features = [
+interface Feature {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+const features: Feature[] = [
   {
-    icon: ClipboardCheck,
-    title: "Diagnóstico Automatizado",
-    description: "Questionário inteligente baseado nos Anexos III e IV do EU AI Act para classificar seu sistema em minutos.",
+    title: "Diagnóstico de Risco",
+    description: "Avalie o nível de risco do seu sistema de IA conforme o EU AI Act.",
+    icon: ShieldCheck,
   },
   {
-    icon: FileText,
-    title: "Documentação Completa",
-    description: "Templates prontos para Política de Transparência, Registro de Logs e demais documentos exigidos.",
-  },
-  {
+    title: "Templates de Documentos",
+    description: "Acesse modelos de documentos essenciais para conformidade.",
     icon: BookOpen,
-    title: "Literacia em IA (Art. 4)",
-    description: "Material de treinamento para garantir que sua equipe entenda e cumpra as obrigações da lei.",
   },
   {
-    icon: Lock,
-    title: "Logs Imutáveis",
-    description: "Sistema de auditoria que armazena registros de forma segura e imutável, conforme exigido pela regulamentação.",
+    title: "Literacia em IA",
+    description: "Capacite sua equipe com conhecimento fundamental sobre IA e regulamentação.",
+    icon: Lightbulb,
   },
   {
-    icon: Scale,
-    title: "Conformidade Legal",
-    description: "Metodologia desenvolvida por especialistas em regulamentação europeia de tecnologia.",
+    title: "Ações Prioritárias",
+    description: "Receba um plano de ação claro para alcançar a conformidade.",
+    icon: Zap,
   },
   {
+    title: "Supervisão Humana",
+    description: "Diretrizes para garantir o controle humano sobre sistemas de IA.",
     icon: Users,
-    title: "Feito para PMEs",
-    description: "Solução acessível e simplificada, pensada especialmente para micro e pequenas empresas.",
+  },
+  {
+    title: "Conformidade Contínua",
+    description: "Mantenha-se atualizado com as mudanças regulatórias e melhores práticas.",
+    icon: Scale,
   },
 ];
 
 const FeaturesSection = () => {
   return (
-    <section className="section-padding bg-background">
-      <div className="container-legal">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Tudo que Você Precisa para a <span className="text-gradient-trust">Conformidade</span>
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Uma plataforma completa que guia sua empresa em cada etapa do processo de adequação ao EU AI Act.
-          </p>
-        </div>
-
-        {/* Features Grid */}
+    <section id="features" className="py-20 bg-background">
+      <div className="container-legal text-center">
+        <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+          Recursos Essenciais para Sua Conformidade
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
+          Nossa plataforma oferece as ferramentas necessárias para navegar pelo complexo cenário do EU AI Act.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => {
+          {features.map((feature) => { // 'index' removido
             const Icon = feature.icon;
             return (
               <div
                 key={feature.title}
-                className="group p-6 rounded-2xl border border-border bg-card hover:border-accent/50 hover:shadow-lg transition-all duration-300"
+                className="legal-card p-6 flex flex-col items-center text-center"
               >
-                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
-                  <Icon className="w-6 h-6 text-accent" />
+                <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
+                  <Icon className="w-8 h-8 text-accent" />
                 </div>
-                <h3 className="font-display font-semibold text-lg text-foreground mb-2">
+                <h3 className="font-semibold text-xl text-foreground mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
+                <p className="text-muted-foreground">{feature.description}</p>
               </div>
             );
           })}

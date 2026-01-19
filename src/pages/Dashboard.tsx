@@ -31,24 +31,24 @@ import {
   Info,
   Loader2,
   Lock,
-  LogOut,
-  Settings,
+  // LogOut, // Removido: não utilizado
+  // Settings, // Removido: não utilizado
   ShieldAlert,
   Users,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Import shared types
+// import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Removido: não utilizado
 import { documentPDFContent } from "@/lib/documentTemplates"; // Import document content
 
 // Types for system updates
 interface SystemUpdate {
   id: string;
   title: string;
-  title_en?: string; // Adicionado para tradução
+  title_en?: string | null; // Alterado para aceitar null
   content: string;
-  content_en?: string; // Adicionado para tradução
+  content_en?: string | null; // Alterado para aceitar null
   update_type: string;
   priority: number;
   published_at: string;
@@ -58,9 +58,9 @@ interface SystemUpdate {
 interface SystemAnnouncement {
   id: string;
   title: string;
-  title_en?: string; // Adicionado para tradução
+  title_en?: string | null; // Alterado para aceitar null
   content: string;
-  content_en?: string; // Adicionado para tradução
+  content_en?: string | null; // Alterado para aceitar null
   announcement_type: string;
   priority: number;
   published_at: string;
@@ -131,7 +131,7 @@ const Dashboard = () => {
     hasCompliancePack, 
     hasPremiumAccess,
     hasBasicAccess,
-    accessLevel,
+    // accessLevel, // Removido: não utilizado
     isPaymentFailed, 
     isCanceled,
     isSubscriptionEnded,
@@ -158,7 +158,7 @@ const Dashboard = () => {
   const [systemAnnouncements, setSystemAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
-  const [language, setLanguage] = useState<'pt' | 'en'>('pt'); // Estado de idioma
+  const [language] = useState<'pt' | 'en'>('pt'); // 'setLanguage' removido, 'language' mantido
 
   const rootElementRef = useRef<HTMLElement | null>(null); // Ref para o elemento root
 
@@ -266,10 +266,15 @@ const Dashboard = () => {
     setGeneratingLiteracyGuide(true);
     try {
       // Fetch latest assessment for personalized content
+      if (!user?.id) { // Adicionado verificação para user.id
+        console.warn("User ID is not available. Cannot fetch assessments for literacy guide.");
+        setGeneratingLiteracyGuide(false);
+        return;
+      }
       const { data: assessments } = await supabase
         .from("risk_assessments")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id) // Usando user.id diretamente
         .order("created_at", { ascending: false })
         .limit(1);
       
@@ -405,7 +410,7 @@ const Dashboard = () => {
   };
 
   const handleDocumentDownload = (docId: number, docName: string) => {
-    generateQuickPDF(docId, docName);
+    handleAccessCheck(true, () => generateQuickPDF(docId, docName)); // Todos os documentos aqui são premium
   };
 
   // Redirect if not authenticated
@@ -431,7 +436,7 @@ const Dashboard = () => {
         if (error) {
           console.error("Error fetching system updates:", error);
         } else {
-          setSystemUpdates(data || []);
+          setSystemUpdates((data as SystemUpdate[]) || []); // Adicionado type assertion
         }
       } catch (error) {
         console.error("Error fetching system updates:", error);
@@ -503,10 +508,10 @@ const Dashboard = () => {
     verifyPaymentFromUrl();
   }, [searchParams, user, refreshPurchase, setSearchParams, isVerifyingPayment]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
+  // const handleSignOut = async () => { // 'handleSignOut' removido: não utilizado
+  //   await signOut();
+  //   navigate("/");
+  // };
 
   if (loading || tasksLoading) {
     return (
@@ -1041,7 +1046,7 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {documents.map((doc) => {
                   const DocIcon = doc.icon;
-                  const isPremiumDoc = doc.premium; // All documents here are premium
+                  // const isPremiumDoc = doc.premium; // Removido: não utilizado
                   const canDownload = hasCompliancePack && !isSubscriptionEnded && !isPaymentFailed;
                   const isLockedForBasic = hasBasicAccess && !hasPremiumAccess;
                   const isDisabled = purchaseLoading || isLockedForBasic || !hasCompliancePack;
@@ -1083,7 +1088,7 @@ const Dashboard = () => {
                         variant="ghost"
                         size="sm"
                         className={`transition-opacity ${canDownload ? 'opacity-0 group-hover:opacity-100' : 'opacity-50'}`}
-                        onClick={() => handleAccessCheck(isPremiumDoc, () => handleDocumentDownload(doc.id, doc.name))}
+                        onClick={() => handleDocumentDownload(doc.id, doc.name)} // Chamando handleDocumentDownload
                         disabled={isDisabled}
                         title={
                           isLockedForBasic 

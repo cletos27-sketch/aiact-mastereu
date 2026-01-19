@@ -339,10 +339,15 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
   const fetchAssessments = async () => {
     try {
       setLoading(true);
+      if (!user?.id) { // Adicionado verificação para user.id
+        console.warn("User ID is not available. Cannot fetch assessments.");
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from("risk_assessments")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id) // Usando user.id diretamente
         .order("created_at", { ascending: false });
 
       if (error) throw error;

@@ -1,120 +1,76 @@
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Shield, Lock, Server, UserCheck, Mail, FileText } from "lucide-react";
+import Header from "@/components/layout/Header";
+import { Mail } from "lucide-react"; // 'Shield', 'Lock', 'Server', 'UserCheck' removidos
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container-legal section-padding pt-24">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
-              <Shield className="w-8 h-8 text-primary" />
-            </div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-primary mb-4">
-              Política de Privacidade
-            </h1>
-            <p className="text-muted-foreground">
-              Última atualização: Janeiro de 2026
+      <main className="pt-24 pb-16 px-4">
+        <div className="container-legal max-w-4xl mx-auto">
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6 text-center">
+            Política de Privacidade
+          </h1>
+
+          <div className="prose prose-invert max-w-none text-muted-foreground">
+            <p>
+              A sua privacidade é de extrema importância para nós. Esta Política de Privacidade descreve como coletamos, usamos e protegemos as suas informações pessoais ao utilizar a nossa plataforma de conformidade com o EU AI Act.
             </p>
-          </div>
 
-          {/* Content */}
-          <div className="prose prose-lg max-w-none">
-            <div className="bg-card rounded-2xl border border-border p-8 mb-8">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-trust/10 flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-6 h-6 text-trust" />
-                </div>
-                <div>
-                  <h2 className="font-display text-2xl font-semibold text-foreground mb-2">
-                    Compromisso com a Proteção de Dados
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    O EU AI-Compliance está comprometido com a proteção de dados pessoais sob o RGPD (GDPR). 
-                    Coletamos seu e-mail exclusivamente para fornecer acesso à nossa plataforma e atualizações 
-                    sobre o AI Act.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <h2>1. Informações que Coletamos</h2>
+            <p>
+              Coletamos informações para fornecer e melhorar os nossos serviços. As informações podem incluir:
+            </p>
+            <ul>
+              <li><strong>Informações de Identificação Pessoal:</strong> Nome, endereço de e-mail, informações de pagamento (processadas por terceiros como Stripe).</li>
+              <li><strong>Dados de Utilização:</strong> Informações sobre como você interage com a plataforma, como páginas visitadas, tempo gasto e funcionalidades utilizadas.</li>
+              <li><strong>Dados de Diagnóstico:</strong> Respostas aos questionários de avaliação de risco de IA, que são utilizados para gerar relatórios de conformidade.</li>
+            </ul>
 
-            <div className="bg-card rounded-2xl border border-border p-8 mb-8">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0">
-                  <Server className="w-6 h-6 text-gold" />
-                </div>
-                <div>
-                  <h2 className="font-display text-2xl font-semibold text-foreground mb-2">
-                    Armazenamento Seguro
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Seus dados são armazenados de forma segura em servidores na União Europeia e nunca 
-                    serão compartilhados com terceiros sem consentimento explícito.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <h2>2. Como Usamos as Suas Informações</h2>
+            <p>
+              Utilizamos as informações coletadas para:
+            </p>
+            <ul>
+              <li>Fornecer e manter o nosso serviço.</li>
+              <li>Personalizar a sua experiência e fornecer conteúdo relevante.</li>
+              <li>Processar transações e gerenciar assinaturas.</li>
+              <li>Comunicar consigo sobre atualizações, segurança e suporte.</li>
+              <li>Melhorar a nossa plataforma e desenvolver novas funcionalidades.</li>
+              <li>Garantir a conformidade com as obrigações legais e regulamentares.</li>
+            </ul>
 
-            <div className="bg-card rounded-2xl border border-border p-8 mb-8">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-display text-2xl font-semibold text-foreground mb-2">
-                    Seus Direitos
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed mb-4">
-                    Sob o RGPD, você tem os seguintes direitos:
-                  </p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold" />
-                      Direito de acesso aos seus dados pessoais
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold" />
-                      Direito de retificação de dados incorretos
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold" />
-                      Direito ao apagamento ("direito a ser esquecido")
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold" />
-                      Direito à portabilidade dos dados
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold" />
-                      Direito de oposição ao processamento
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <h2>3. Partilha de Informações</h2>
+            <p>
+              Não vendemos, trocamos ou alugamos as suas informações pessoais a terceiros. Podemos partilhar informações com:
+            </p>
+            <ul>
+              <li><strong>Fornecedores de Serviços:</strong> Terceiros que nos ajudam a operar a plataforma (ex: processadores de pagamento, serviços de hospedagem).</li>
+              <li><strong>Obrigações Legais:</strong> Quando exigido por lei ou para responder a processos legais.</li>
+            </ul>
 
-            <div className="bg-card rounded-2xl border border-border p-8">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-trust/10 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-6 h-6 text-trust" />
-                </div>
-                <div>
-                  <h2 className="font-display text-2xl font-semibold text-foreground mb-2">
-                    Contacto
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Para exercer qualquer um dos seus direitos ou para questões relacionadas com a privacidade, 
-                    entre em contacto connosco através do e-mail:{" "}
-                    <a href="mailto:privacy@aiact-master.eu" className="text-primary hover:text-primary/80 transition-colors">
-                      privacy@aiact-master.eu
-                    </a>
-                  </p>
-                </div>
-              </div>
-            </div>
+            <h2>4. Segurança dos Dados</h2>
+            <p>
+              Implementamos medidas de segurança robustas para proteger as suas informações contra acesso não autorizado, alteração, divulgação ou destruição. No entanto, nenhum método de transmissão pela internet ou armazenamento eletrónico é 100% seguro.
+            </p>
+
+            <h2>5. Os Seus Direitos</h2>
+            <p>
+              Você tem o direito de aceder, corrigir, atualizar ou solicitar a exclusão das suas informações pessoais. Para exercer esses direitos, entre em contato connosco através do e-mail fornecido.
+            </p>
+
+            <h2>6. Alterações a Esta Política</h2>
+            <p>
+              Podemos atualizar a nossa Política de Privacidade periodicamente. Notificaremos sobre quaisquer alterações publicando a nova política nesta página.
+            </p>
+
+            <h2>7. Contacto</h2>
+            <p>
+              Se tiver alguma dúvida sobre esta Política de Privacidade, entre em contato connosco:
+            </p>
+            <p>
+              <Mail className="inline-block h-4 w-4 mr-2" /> support@aiact-master.eu
+            </p>
           </div>
         </div>
       </main>
