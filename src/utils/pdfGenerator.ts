@@ -1,119 +1,41 @@
 import jsPDF from 'jspdf';
-
 import autoTable from 'jspdf-autotable';
 
-
-
-// Função que lê o cookie do Google Tradutor para saber o idioma atual do site
-
-const getCurrentLanguage = () => {
-
-  try {
-
-    const cookie = document.cookie.split('; ').find(row => row.startsWith('googtrans='));
-
-    if (cookie) {
-
-      const lang = cookie.split('/').pop(); // Extrai 'en', 'es', etc.
-
-      return lang === 'en' ? 'en' : 'pt'; 
-
-    }
-
-  } catch (e) {
-
-    console.error("Erro ao ler idioma do Google:", e);
-
-  }
-
-  return 'pt'; // Se não encontrar nada, o padrão é Português
-
-};
-
-
-
 export const generatePDF = (tasks: any[]) => {
+  try {
+    const doc = new jsPDF();
+    
+    // Detecta o idioma de forma segura sem quebrar o código
+    const isEnglish = document.cookie.includes('googtrans=/pt/en') || document.documentElement.lang === 'en';
+    const lang = isEnglish ? 'en' : 'pt';
 
-  const lang = getCurrentLanguage();
+    const content = {
+      pt: { title: "Relatório de Conformidade IA", task: "Tarefa", status: "Status", done: "Concluído", todo: "Pendente" },
+      en: { title: "AI Compliance Report", task: "Task", status: "Status", done: "Completed", todo: "Pending" }
+    };
 
-  const doc = new jsPDF();
+    const t = content[lang];
 
+    doc.setFontSize(18);
+    doc.text(t.title, 14, 22);
 
-
-  // Dicionário de tradução fixo APENAS para o PDF
-
-  const content = {
-
-    pt: { 
-
-      title: "Relatório de Conformidade EU AI Act", 
-
-      col1: "Tarefa", 
-
-      col2: "Status", 
-
-      done: "Concluído", 
-
-      todo: "Pendente" 
-
-    },
-
-    en: { 
-
-      title: "EU AI Act Compliance Report", 
-
-      col1: "Task", 
-
-      col2: "Status", 
-
-      done: "Completed", 
-
-      todo: "Pending" 
-
-    }
-
-  };
-
-
-
-  const t = content[lang as keyof typeof content] || content.pt;
-
-
-
-  // Título do Documento
-
-  doc.setFontSize(18);
-
-  doc.setTextColor(15, 23, 42); // Cor Slate-900 do seu site
-
-  doc.text(t.title, 14, 22);
-
-
-
-  // Gerar a Tabela
-
-  autoTable(doc, {
-
-    startY: 30,
-
-    head: [[t.col1, t.col2]],
-
-    body: tasks.map(task => [
-
-      task.task, // Texto da tarefa vindo do banco
-
+    const tableRows = tasks.map(task => [
+      task.task || "N/A",
       task.is_completed ? t.done : t.todo
+    ]);
 
-    ]),
+    autoTable(doc, {
+      startY: 30,
+      head: [[t.col1 || t.task, t.col2 || t.status]], // Fallback caso algum nome mude
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] }
+    });
 
-    headStyles: { fillColor: [15, 23, 42] }, // Cabeçalho com a cor do site
-
-    theme: 'striped'
-
-  });
-
-
-
-  doc.save(`Relatorio_AI_${lang.toUpperCase()}.pdf`);
-
+    doc.save(`Relatorio_IA_${lang.toUpperCase()}.pdf`);
+    console.log("PDF gerado com sucesso!");
+  } catch (err) {
+    console.error("Erro crítico ao gerar PDF:", err);
+    alert("Erro ao gerar PDF. Verifique o console.");
+  }
 };
