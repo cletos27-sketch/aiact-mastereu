@@ -250,6 +250,7 @@ export type Database = {
       };
       user_tasks: {
         Row: {
+          task_key: string | null
           category: string
           id: string
           is_completed: boolean
@@ -257,7 +258,7 @@ export type Database = {
           task: string
           user_id: string
         }
-        Insert: {
+        Insert: {          
           category: string
           id?: string
           is_completed?: boolean
