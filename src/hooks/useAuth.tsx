@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from "react"; // 'ReactNode' movido para ser usado
+import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corrigido: tipagem de children
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   }, []);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -207,22 +207,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session on initial load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Also check on initial load
+      // Ensure profile exists for already logged-in users on initial load
       if (session?.user) {
         await ensureProfileExists(
           session.user.id, 
           session.user.email || "",
           session.user.user_metadata?.full_name
         );
-        // No navigation here on initial load, as the user might be on any page.
-        // The navigation after assessment completion is handled by Assessment.tsx or Login.tsx
-        await savePendingAssessment(session.user.id, session.user.email || "");
+        // Do NOT call savePendingAssessment here. It's handled by the SIGNED_IN event
+        // for new logins, or by Assessment.tsx if the user is already logged in
+        // and completes an assessment.
       }
     });
 
