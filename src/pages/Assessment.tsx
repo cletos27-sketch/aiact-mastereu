@@ -6,9 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, CheckCircle2, HelpCircle, Shield, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth"; // Import useAuth
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { toast } from "sonner"; // Import sonner toast
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Question {
   id: number;
@@ -148,7 +148,7 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Assessment = () => {
   const navigate = useNavigate();
-  const { session } = useAuth(); // 'user' removido da desestruturação
+  const { session } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
@@ -214,7 +214,7 @@ const Assessment = () => {
         let serverResult: any;
         if (token) {
           const { data, error } = await supabase.functions.invoke('analyze-risk', {
-            body: JSON.stringify({ responses: formattedResponses }),
+            body: JSON.stringify({ responses: formattedResponses, questions: questions }), // <--- Adicionado o array de questions aqui
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
