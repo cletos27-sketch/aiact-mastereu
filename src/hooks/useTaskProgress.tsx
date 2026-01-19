@@ -57,8 +57,9 @@ export const useTaskProgress = () => {
           return { ...task, completed: savedTask ? savedTask.is_completed : false };
         })
       );
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para exibir a mensagem
       console.error('Error fetching task progress:', error);
+      toast.error(`Erro ao carregar progresso das tarefas: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setInitialLoading(false);
     }
@@ -103,7 +104,7 @@ export const useTaskProgress = () => {
       if (error) {
         throw error;
       }
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para exibir a mensagem
       console.error("Error updating task:", error);
       // Revert the change in UI on error
       setTasks(currentTasks =>
@@ -111,7 +112,7 @@ export const useTaskProgress = () => {
           t.key === taskKey ? { ...t, completed: task.completed } : t
         )
       );
-      toast.error("Failed to update task progress.");
+      toast.error(`Falha ao atualizar o progresso da tarefa: ${error.message || 'Erro desconhecido'}.`);
     } finally {
       // Remove loading state
       setTasks(currentTasks =>
