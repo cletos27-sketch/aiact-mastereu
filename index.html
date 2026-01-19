@@ -8,14 +8,36 @@
     <title>EU AI-Compliance Master</title>
   </head>
   <body>
-    <div id="google_translate_element" style="position: absolute; top: 10px; right: 10px; z-index: 9999;"></div>
     <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <div id="google_translate_element" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
     <script type="text/javascript">
       function googleTranslateElementInit() {
-        new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+        new google.translate.TranslateElement({
+          pageLanguage: 'pt', // Idioma original do seu site
+          includedLanguages: 'en,es,fr,de,it', // Idiomas que você quer oferecer
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false
+        }, 'google_translate_element');
       }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-    <script type="module" src="/src/main.tsx"></script>
+    <style>
+      /* Remove a barra superior feia do Google que empurra o site para baixo */
+      body { top: 0 !important; }
+      .goog-te-banner-frame.skiptranslate { display: none !important; }
+      .goog-te-gadget-icon { display: none !important; }
+      
+      /* Ajusta o estilo do seletor para ficar mais limpo */
+      .goog-te-gadget-simple {
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 8px !important;
+        border-radius: 8px !important;
+        font-family: sans-serif !important;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+      }
+    </style>
   </body>
 </html>
