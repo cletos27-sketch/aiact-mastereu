@@ -4,12 +4,5 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-export function handleOptions(req: Request) {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-  return null; // Continue with normal request handling
-}
-
-// Adicionando o que a função está procurando:
+// Esta é a função que o seu erro disse que estava faltando:
 export const getCorsHeaders = () => corsHeaders;
