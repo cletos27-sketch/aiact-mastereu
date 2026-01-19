@@ -55,7 +55,8 @@ const Results = () => {
   
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const hasSaved = useRef(false);
+  // hasSaved is no longer needed here as saving is handled by useAuth or Assessment.tsx
+  // const hasSaved = useRef(false);
 
   // Effect to load assessment data from location.state or localStorage
   useEffect(() => {
@@ -388,65 +389,50 @@ const Results = () => {
     }
   }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
-  // Save assessment in background - non-blocking, fire and forget
-  useEffect(() => {
-    // Don't block the UI, save in background
-    const saveInBackground = () => {
-      if (!riskScore || !questionsData || hasSaved.current) return;
-      
-      // If user is not logged in, data is already in localStorage (saved in Assessment.tsx)
-      // It will be persisted to DB when they login/signup via useAuth hook
-      if (!user) {
-        return;
-      }
-      
-      // Mark as saving started to prevent duplicates
-      hasSaved.current = true;
-      
-      const insertData = {
-        user_id: user.id,
-        user_email: user.email || "",
-        responses: questionsData as unknown as Record<string, unknown>,
-        risk_score: riskScore.score,
-        risk_classification: riskClassification,
-        legal_justification: generateLegalJustification(),
-        relevant_articles: getRelevantArticles(),
-        priority_actions: getPriorityActions(),
-      };
-      
-      // Fire and forget - use async IIFE to handle errors properly
-      (async () => {
-        try {
-          const { error: saveError } = await supabase
-            .from("risk_assessments")
-            .insert(insertData as any);
-
-          if (saveError) {
-            console.error("Error saving assessment:", saveError);
-            hasSaved.current = false; // Allow retry
-            
-            if (saveError.code === "42501") {
-              console.warn("Permission error - user may need to re-authenticate");
-            } else if (saveError.code === "23505") {
-              // Duplicate - assessment already saved
-              hasSaved.current = true;
-            }
-          } else {
-            // Clear localStorage since we saved successfully
-            localStorage.removeItem(PENDING_ASSESSMENT_KEY);
-            console.log("Assessment saved successfully in background");
-          }
-        } catch (error) {
-          console.error("Background save error:", error);
-          hasSaved.current = false; // Allow retry
-        }
-      })();
-    };
-
-    // Run save in background with slight delay to not block initial render
-    const timeoutId = setTimeout(saveInBackground, 100);
-    return () => clearTimeout(timeoutId);
-  }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
+  // Removed the useEffect for background saving as it's now handled by useAuth or Assessment.tsx
+  // useEffect(() => {
+  //   const saveInBackground = () => {
+  //     if (!riskScore || !questionsData || hasSaved.current) return;
+  //     if (!user) {
+  //       return;
+  //     }
+  //     hasSaved.current = true;
+  //     const insertData = {
+  //       user_id: user.id,
+  //       user_email: user.email || "",
+  //       responses: questionsData as unknown as Record<string, unknown>,
+  //       risk_score: riskScore.score,
+  //       risk_classification: riskClassification,
+  //       legal_justification: generateLegalJustification(),
+  //       relevant_articles: getRelevantArticles(),
+  //       priority_actions: getPriorityActions(),
+  //     };
+  //     (async () => {
+  //       try {
+  //         const { error: saveError } = await supabase
+  //           .from("risk_assessments")
+  //           .insert(insertData as any);
+  //         if (saveError) {
+  //           console.error("Error saving assessment:", saveError);
+  //           hasSaved.current = false;
+  //           if (saveError.code === "42501") {
+  //             console.warn("Permission error - user may need to re-authenticate");
+  //           } else if (saveError.code === "23505") {
+  //             hasSaved.current = true;
+  //           }
+  //         } else {
+  //           localStorage.removeItem(PENDING_ASSESSMENT_KEY);
+  //           console.log("Assessment saved successfully in background");
+  //         }
+  //       } catch (error) {
+  //         console.error("Background save error:", error);
+  //         hasSaved.current = false;
+  //       }
+  //     })();
+  //   };
+  //   const timeoutId = setTimeout(saveInBackground, 100);
+  //   return () => clearTimeout(timeoutId);
+  // }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
   const riskConfig = {
     PROIBIDO: {

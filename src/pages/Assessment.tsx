@@ -235,9 +235,9 @@ const Assessment = () => {
     // 1. Salva no "bolso" do navegador (localStorage)
     localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(dados));
     
-    // 2. Manda para o Login (ou Results se já logado)
+    // 2. Manda para o Dashboard (se já logado) ou Login (se não logado)
     if (user) {
-      navigate('/results', { state: dados });
+      navigate('/dashboard'); // Redireciona para o dashboard
     } else {
       navigate('/login'); 
     }

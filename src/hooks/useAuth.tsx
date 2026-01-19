@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 interface AuthContextType {
   user: User | null;
@@ -22,11 +23,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Function to save pending assessment to database
   const savePendingAssessment = useCallback(async (userId: string, userEmail: string) => {
     const pendingData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
-    if (!pendingData) return;
+    if (!pendingData) return false; // Return false if no pending data
 
     try {
       const assessmentData = JSON.parse(pendingData);
@@ -131,13 +133,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (saveError) {
         console.error("Error saving pending assessment:", saveError);
         sonnerToast.error("Erro ao salvar avaliação pendente. Erro: " + saveError.message);
+        return false;
       } else {
         // Clear the pending data after successful save
         localStorage.removeItem(PENDING_ASSESSMENT_KEY);
         sonnerToast.success("Diagnóstico anterior salvo automaticamente!");
+        return true; // Return true if saved successfully
       }
     } catch (error) {
       console.error("Error parsing pending assessment:", error);
+      return false;
     }
   }, []);
 
@@ -192,7 +197,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               session.user.email || "",
               session.user.user_metadata?.full_name
             );
-            await savePendingAssessment(session.user.id, session.user.email || "");
+            const saved = await savePendingAssessment(session.user.id, session.user.email || "");
+            if (saved) {
+              navigate('/dashboard'); // Redirect to dashboard after saving pending assessment
+            }
           }, 100);
         }
       }
@@ -211,12 +219,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           session.user.email || "",
           session.user.user_metadata?.full_name
         );
+        // No navigation here on initial load, as the user might be on any page.
+        // The navigation after assessment completion is handled by Assessment.tsx or Login.tsx
         await savePendingAssessment(session.user.id, session.user.email || "");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [ensureProfileExists, savePendingAssessment]);
+  }, [ensureProfileExists, savePendingAssessment, navigate]); // Add navigate to dependency array
 
   // Placeholder for HaveIBeenPwned check
   const checkPasswordForPwned = async (password: string): Promise<boolean> => {

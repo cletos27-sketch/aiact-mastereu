@@ -26,7 +26,7 @@ export const generatePDF = (tasks: any[]) => {
 
     autoTable(doc, {
       startY: 30,
-      head: [[t.col1 || t.task, t.col2 || t.status]], // Fallback caso algum nome mude
+      head: [[t.task, t.status]], // Usando t.task e t.status diretamente
       body: tableRows,
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42] }
