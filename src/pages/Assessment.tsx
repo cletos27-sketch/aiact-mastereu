@@ -190,13 +190,9 @@ const Assessment = () => {
     // 1. Salva no "bolso" do navegador (localStorage)
     localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(dados));
     
-    // 2. Manda para o Dashboard (se já logado) ou Login (se não logado)
-    if (user) {
-      navigate('/dashboard'); // Redireciona para o dashboard
-    } else {
-      navigate('/login'); 
-    }
-  }, [navigate, user]);
+    // 2. Redireciona para a página de resultados
+    navigate('/results'); 
+  }, [navigate]);
 
   const handleNext = async () => {
     if (currentStep < questions.length - 1) {
@@ -211,27 +207,55 @@ const Assessment = () => {
         }, {} as Record<string, string>);
 
         const token = session?.access_token;
-        if (!token) {
-          toast.error("Você precisa estar logado para finalizar o diagnóstico.");
-          navigate('/login');
-          return;
+        // If user is not logged in, we still want to proceed to results,
+        // but the assessment won't be saved to DB until they log in.
+        // The PENDING_ASSESSMENT_KEY will ensure data is available.
+
+        let serverResult: any;
+        if (token) {
+          const { data, error } = await supabase.functions.invoke('analyze-risk', {
+            body: JSON.stringify({ responses: formattedResponses }),
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (error) {
+            console.error("Error invoking analyze-risk function:", error);
+            toast.error(`Erro ao analisar risco: ${error.message}`);
+            // Proceed with a default or client-side calculation if server fails
+            // For now, we'll just return to avoid blank page, but ideally
+            // a fallback risk calculation would be here.
+            setIsSubmitting(false);
+            return; 
+          }
+          serverResult = data;
+        } else {
+          // Fallback for unauthenticated users: client-side risk calculation
+          // This is a simplified version for demonstration.
+          // In a real app, you'd replicate the server-side logic here or
+          // ensure login is mandatory before final submission.
+          const prohibitedTriggered = questions.some(q => q.riskType === "prohibited" && answers[q.id]);
+          const highRiskTriggered = questions.some(q => q.riskType === "high" && answers[q.id]);
+          const limitedRiskTriggered = questions.some(q => q.riskType === "limited" && answers[q.id]);
+          const outOfScopeTriggered = questions.some(q => q.riskType === "out_of_scope" && answers[q.id]);
+
+          let riskClassification: RiskClassification = "RISCO_MINIMO";
+          if (outOfScopeTriggered) riskClassification = "FORA_DE_ESCOPO";
+          else if (prohibitedTriggered) riskClassification = "PROIBIDO";
+          else if (highRiskTriggered) riskClassification = "ALTO_RISCO";
+          else if (limitedRiskTriggered) riskClassification = "RISCO_LIMITADO";
+
+          const triggeredQuestions = questions.filter(q => answers[q.id] && (q.riskType === "prohibited" || q.riskType === "high" || q.riskType === "limited"));
+          
+          serverResult = {
+            riskScore: { score: 0, maxScore: 0, percentage: 0 }, // Placeholder
+            riskClassification: riskClassification,
+            triggeredQuestions: triggeredQuestions.map(q => ({ question: `q${q.id}`, riskType: q.riskType })),
+          };
         }
 
-        const { data, error } = await supabase.functions.invoke('analyze-risk', {
-          body: JSON.stringify({ responses: formattedResponses }),
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (error) {
-          console.error("Error invoking analyze-risk function:", error);
-          toast.error(`Erro ao analisar risco: ${error.message}`);
-          return;
-        }
-
-        const serverResult = data; // This is the response from your Edge Function
 
         const questionsDataForDisplay = questions.map((q) => {
           const answered = answers[q.id];
