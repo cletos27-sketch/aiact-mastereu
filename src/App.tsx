@@ -3,7 +3,7 @@ import { SonnerToaster } from "@/components/ui/sonner-shadcn";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { AuthProvider } from "@/hooks/useAuth"; // 'useAuth' removido
 // import { supabase } from "@/integrations/supabase/client"; // Removido: não utilizado
 // import { toast } from "sonner"; // Removido: não utilizado
 import Index from "./pages/Index";
@@ -19,7 +19,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import CookieConsent from "./components/CookieConsent";
-import { usePurchaseStatus } from "./hooks/usePurchaseStatus";
+// import { usePurchaseStatus } from "./hooks/usePurchaseStatus"; // Removido: não utilizado
 
 
 const queryClient = new QueryClient();
