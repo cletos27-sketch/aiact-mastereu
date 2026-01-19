@@ -37,7 +37,6 @@ import {
   Users,
   AlertTriangle,
   RefreshCw,
-  Languages, // Importar o ícone de idiomas
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { RiskAssessment, DocumentType } from "@/types/dashboard"; // Import shared types
@@ -532,16 +531,6 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {/* Botão de troca de idioma */}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
-              >
-                <Languages className="w-4 h-4 mr-2" />
-                {language === 'pt' ? 'English' : 'Português'}
-              </Button>
-
               {/* Refresh Access Button - always visible */}
               <Button 
                 variant="outline" 
@@ -727,7 +716,7 @@ const Dashboard = () => {
                         },
                       });
                       if (error) {
-                        toast.error("Erro ao iniciar checkout. Tente novamente.");
+                        toast.error("Erro ao processar. Tente novamente.");
                         return;
                       }
                       if (data?.url) {
