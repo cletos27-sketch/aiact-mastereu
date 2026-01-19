@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Import toast from sonner
 import jsPDF from "jspdf";
 import {
   Ban,
@@ -56,9 +56,9 @@ const AssessmentHistory = () => {
       if (error) throw error;
 
       setAssessments(data || []);
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para exibir a mensagem
       console.error("Error fetching assessments:", error);
-      toast.error("Erro ao carregar histórico de avaliações.");
+      toast.error(`Erro ao carregar histórico de avaliações: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -259,9 +259,9 @@ const AssessmentHistory = () => {
       doc.save(fileName);
 
       toast.success("PDF gerado com sucesso!");
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para exibir a mensagem
       console.error("Error generating PDF:", error);
-      toast.error("Erro ao gerar PDF.");
+      toast.error(`Erro ao gerar PDF: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setGeneratingPDF(null);
     }

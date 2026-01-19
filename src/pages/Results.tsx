@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import PricingCards from "@/components/PricingCards";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Import toast from sonner
 import jsPDF from "jspdf";
 import {
   AlertTriangle,
@@ -55,8 +55,6 @@ const Results = () => {
   
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  // hasSaved is no longer needed here as saving is handled by useAuth or Assessment.tsx
-  // const hasSaved = useRef(false);
 
   // Effect to load assessment data from location.state or localStorage
   useEffect(() => {
@@ -381,58 +379,13 @@ const Results = () => {
       doc.save(fileName);
       
       toast.success("PDF gerado com sucesso!");
-    } catch (error) {
+    } catch (error: any) { // Captura o erro para exibir a mensagem
       console.error("Error generating PDF:", error);
-      toast.error("Erro ao gerar PDF. Tente novamente.");
+      toast.error(`Erro ao gerar PDF do relatório: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsGeneratingPDF(false);
     }
   }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
-
-  // Removed the useEffect for background saving as it's now handled by useAuth or Assessment.tsx
-  // useEffect(() => {
-  //   const saveInBackground = () => {
-  //     if (!riskScore || !questionsData || hasSaved.current) return;
-  //     if (!user) {
-  //       return;
-  //     }
-  //     hasSaved.current = true;
-  //     const insertData = {
-  //       user_id: user.id,
-  //       user_email: user.email || "",
-  //       responses: questionsData as unknown as Record<string, unknown>,
-  //       risk_score: riskScore.score,
-  //       risk_classification: riskClassification,
-  //       legal_justification: generateLegalJustification(),
-  //       relevant_articles: getRelevantArticles(),
-  //       priority_actions: getPriorityActions(),
-  //     };
-  //     (async () => {
-  //       try {
-  //         const { error: saveError } = await supabase
-  //           .from("risk_assessments")
-  //           .insert(insertData as any);
-  //         if (saveError) {
-  //           console.error("Error saving assessment:", saveError);
-  //           hasSaved.current = false;
-  //           if (saveError.code === "42501") {
-  //             console.warn("Permission error - user may need to re-authenticate");
-  //           } else if (saveError.code === "23505") {
-  //             hasSaved.current = true;
-  //           }
-  //         } else {
-  //           localStorage.removeItem(PENDING_ASSESSMENT_KEY);
-  //           console.log("Assessment saved successfully in background");
-  //         }
-  //       } catch (error) {
-  //         console.error("Background save error:", error);
-  //         hasSaved.current = false;
-  //       }
-  //     })();
-  //   };
-  //   const timeoutId = setTimeout(saveInBackground, 100);
-  //   return () => clearTimeout(timeoutId);
-  // }, [riskScore, questionsData, riskClassification, user, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
   const riskConfig = {
     PROIBIDO: {
