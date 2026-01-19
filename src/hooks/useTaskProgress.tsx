@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 
 interface Task {
   key: string;
@@ -70,14 +71,16 @@ export const useTaskProgress = () => {
   const toggleTask = async (taskKey: string) => {
     if (!user) return;
 
-    const taskIndex = tasks.findIndex(t => t.key === taskKey);
-    if (taskIndex === -1) return;
+    const task = tasks.find(t => t.key === taskKey);
+    if (!task) return;
 
-    const task = tasks[taskIndex];
     const newCompletedState = !task.completed;
 
+    // Optimistically update the UI
     setTasks(currentTasks =>
-      currentTasks.map(t => (t.key === taskKey ? { ...t, loading: true } : t))
+      currentTasks.map(t => 
+        t.key === taskKey ? { ...t, completed: newCompletedState, loading: true } : t
+      )
     );
 
     try {
@@ -88,20 +91,24 @@ export const useTaskProgress = () => {
           { onConflict: 'user_id, task_key' }
         );
 
-      if (error) throw error;
-
-      setTasks(currentTasks =>
-        currentTasks.map(t => (t.key === taskKey ? { ...t, completed: newCompletedState } : t))
-      );
+      if (error) {
+        throw error;
+      }
     } catch (error) {
-      console.error('Error updating task progress:', error);
-      // Revert UI on error
+      console.error("Error updating task:", error);
+      // Revert the change in UI on error
       setTasks(currentTasks =>
-        currentTasks.map(t => (t.key === taskKey ? { ...t, completed: task.completed } : t))
+        currentTasks.map(t =>
+          t.key === taskKey ? { ...t, completed: task.completed } : t
+        )
       );
+      toast.error("Failed to update task progress.");
     } finally {
+      // Remove loading state
       setTasks(currentTasks =>
-        currentTasks.map(t => (t.key === taskKey ? { ...t, loading: false } : t))
+        currentTasks.map(t =>
+          t.key === taskKey ? { ...t, loading: false } : t
+        )
       );
     }
   };
