@@ -1,7 +1,11 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// @ts-ignore
 import Stripe from "https://esm.sh/stripe@18.5.0";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+// @ts-ignore
+import { corsHeaders, handleOptions } from "../_shared/cors.ts"; // Import atualizado
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -10,15 +14,18 @@ const logStep = (step: string, details?: unknown) => {
 
 serve(async (req: Request) => {
   // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return handleCorsPreflightRequest(req);
+  const optionsResponse = handleOptions(req);
+  if (optionsResponse) {
+    return optionsResponse;
   }
 
-  const corsHeaders = getCorsHeaders(req);
-
+  // @ts-ignore
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  // @ts-ignore
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // @ts-ignore
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  // @ts-ignore
   const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
 
   if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey || !stripeSecretKey) {
