@@ -10,3 +10,6 @@ export function handleOptions(req: Request) {
   }
   return null; // Continue with normal request handling
 }
+
+// Adicionando o que a função está procurando:
+export const getCorsHeaders = () => corsHeaders;
