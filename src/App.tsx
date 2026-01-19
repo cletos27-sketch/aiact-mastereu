@@ -1,6 +1,6 @@
 import { useEffect } from "react"; // Import useEffect
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { SonnerToaster } from "@/components/ui/sonner-shadcn"; // <--- Atualizado para o novo nome
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -22,87 +22,49 @@ import CookiePolicy from "./pages/CookiePolicy";
 import CookieConsent from "./components/CookieConsent";
 import { usePurchaseStatus } from "./hooks/usePurchaseStatus"; // Import usePurchaseStatus
 
-const queryClient = new QueryClient();
 
-// Define PENDING_ASSESSMENT_KEY here or import if it's in a shared constants file
-const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
+const queryClient = new QueryClient();
 
 const AppContent = () => {
   const { user } = useAuth();
-  const { hasCompliancePack, loading: purchaseStatusLoading } = usePurchaseStatus(); // Use the hook
+  const { refresh: refreshPurchaseStatus } = usePurchaseStatus();
 
   useEffect(() => {
-    // Debug log for access status
-    if (!purchaseStatusLoading) {
-      console.log("Status de acesso (usePurchaseStatus):", hasCompliancePack);
-      if (user) {
-        console.log("User ID:", user.id, "Email:", user.email);
-      }
-    }
-  }, [user, hasCompliancePack, purchaseStatusLoading]);
+    const handlePaymentSuccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
 
-
-  useEffect(() => {
-    const sincronizarDiagnostico = async () => {
-      const pendente = localStorage.getItem(PENDING_ASSESSMENT_KEY);
-      if (pendente && user) {
+      if (sessionId && user) {
         try {
-          const assessmentData = JSON.parse(pendente);
-          
-          // Check if an assessment with the same timestamp already exists for this user
-          // This helps prevent duplicate entries if the user logs in multiple times quickly
-          const { data: existingAssessments, error: fetchError } = await supabase
-            .from('risk_assessments')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('created_at', assessmentData.timestamp) // Assuming timestamp is stored as created_at
-            .limit(1);
+          const { data, error } = await supabase.functions.invoke('verify-payment', {
+            body: { session_id: sessionId },
+          });
 
-          if (fetchError) {
-            console.error("Error checking for existing assessment:", fetchError);
-            return;
+          if (error) {
+            console.error("Payment verification error:", error);
+            toast.error("Erro ao verificar pagamento.");
+          } else if (data?.paid) {
+            toast.success("Pagamento confirmado! Acesso atualizado.");
+            await refreshPurchaseStatus();
           }
-
-          if (existingAssessments && existingAssessments.length > 0) {
-            console.log("Pending assessment already exists in DB, removing from localStorage.");
-            localStorage.removeItem(PENDING_ASSESSMENT_KEY);
-            return;
-          }
-
-          // Insert the pending assessment
-          const { error: insertError } = await supabase
-            .from('risk_assessments') // Nome da sua tabela de diagnósticos
-            .insert([{ 
-              ...assessmentData, 
-              user_id: user.id,
-              user_email: user.email || "", // Ensure email is also saved
-              risk_score: assessmentData.riskScore.score, // Extract score
-              risk_classification: assessmentData.riskClassification, // Extract classification
-              responses: assessmentData.questionsData, // Use questionsData as responses
-              created_at: assessmentData.timestamp, // Use the timestamp from the assessment
-              updated_at: new Date().toISOString(),
-            }]);
-          
-          if (insertError) {
-            console.error("Erro ao sincronizar diagnóstico:", insertError);
-            toast.error("Erro ao salvar diagnóstico pendente. Tente novamente.");
-          } else {
-            localStorage.removeItem(PENDING_ASSESSMENT_KEY);
-            toast.success("Diagnóstico anterior salvo automaticamente!");
-          }
-        } catch (e) {
-          console.error("Erro ao processar diagnóstico pendente:", e);
-          localStorage.removeItem(PENDING_ASSESSMENT_KEY); // Clear invalid data
+        } catch (error) {
+          console.error("Payment verification error:", error);
+          toast.error("Erro ao verificar pagamento.");
+        } finally {
+          // Clean up the URL
+          urlParams.delete('session_id');
+          window.history.replaceState({}, document.title, `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ''}`);
         }
       }
     };
-    sincronizarDiagnostico();
-  }, [user]); // Dependência do usuário para disparar a sincronização no login
+
+    handlePaymentSuccess();
+  }, [user, refreshPurchaseStatus]);
 
   return (
     <>
       <Toaster />
-      <Sonner />
+      <SonnerToaster /> {/* <--- Usando o componente renomeado */}
       <CookieConsent />
       <Routes>
         <Route path="/" element={<Index />} />
