@@ -148,7 +148,7 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Assessment = () => {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session } = useAuth(); // Obter a sessão do usuário
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
@@ -190,9 +190,13 @@ const Assessment = () => {
     // 1. Salva no "bolso" do navegador (localStorage)
     localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(dados));
     
-    // 2. Redireciona para a página de resultados
-    navigate('/results'); 
-  }, [navigate]);
+    // 2. Redireciona
+    if (session?.user) { // Se o usuário estiver logado, redireciona para o dashboard
+      navigate('/dashboard');
+    } else { // Caso contrário, redireciona para a página de resultados
+      navigate('/results'); 
+    }
+  }, [navigate, session?.user]); // Adicionar session?.user às dependências
 
   const handleNext = async () => {
     if (currentStep < questions.length - 1) {
