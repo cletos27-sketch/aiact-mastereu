@@ -203,7 +203,7 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
     pdf.text(`Data de geração: ${new Date().toLocaleDateString("pt-BR")}`, margin + 10, yPosition + 12);
     pdf.text(`Regulamento: (UE) 2024/1689 — EU AI Act`, margin + 10, yPosition + 22);
     if (assessmentData?.risk_classification) {
-      pdf.text(`Classificação do sistema: ${assessmentData.risk_classification}`, margin + 10, yPosition + 32);
+      pdf.text(`Classificação do sistema: ${assessmentData.risk_classification} (Score: ${assessmentData.risk_score || "N/A"})`, margin + 10, yPosition + 32);
     }
     
     yPosition += 55;
@@ -461,7 +461,10 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
     }
 
     // ==================== PAGE 8: ASSESSMENT DATA (if available) ====================
-    if (assessmentData?.legal_justification || assessmentData?.relevant_articles?.length || assessmentData?.priority_actions?.length) {
+    const relevantArticlesFromAssessment = Array.isArray(assessmentData?.relevant_articles) ? assessmentData.relevant_articles : [];
+    const priorityActionsFromAssessment = Array.isArray(assessmentData?.priority_actions) ? assessmentData.priority_actions : [];
+
+    if (assessmentData?.legal_justification || relevantArticlesFromAssessment.length > 0 || priorityActionsFromAssessment.length > 0) {
       addNewPage();
       addHeader();
       yPosition = 40;
@@ -477,16 +480,16 @@ export const generateAILiteracyGuidePDF = (assessmentData?: AssessmentData) => {
         addParagraph(assessmentData.legal_justification);
       }
       
-      if (assessmentData.relevant_articles && assessmentData.relevant_articles.length > 0) {
+      if (relevantArticlesFromAssessment.length > 0) {
         addSubsectionTitle("Artigos Relevantes do EU AI Act");
-        for (const article of assessmentData.relevant_articles) {
+        for (const article of relevantArticlesFromAssessment) {
           addBulletPoint(article);
         }
       }
       
-      if (assessmentData.priority_actions && assessmentData.priority_actions.length > 0) {
+      if (priorityActionsFromAssessment.length > 0) {
         addSubsectionTitle("Ações Prioritárias Recomendadas");
-        for (const action of assessmentData.priority_actions) {
+        for (const action of priorityActionsFromAssessment) {
           addBulletPoint(action);
         }
       }

@@ -180,7 +180,8 @@ const AssessmentHistory = () => {
       }
 
       // Relevant Articles
-      if (assessment.relevant_articles && assessment.relevant_articles.length > 0) {
+      const relevantArticles = Array.isArray(assessment.relevant_articles) ? assessment.relevant_articles : [];
+      if (relevantArticles.length > 0) {
         checkNewPage(60);
 
         doc.setTextColor(15, 30, 60);
@@ -190,11 +191,12 @@ const AssessmentHistory = () => {
 
         yPos += 8;
         doc.setDrawColor(200, 168, 87);
+        doc.setLineWidth(0.5);
         doc.line(margin, yPos, margin + 60, yPos);
 
         yPos += 10;
 
-        assessment.relevant_articles.forEach((article) => {
+        relevantArticles.forEach((article) => {
           checkNewPage(10);
           doc.setFillColor(200, 168, 87);
           doc.circle(margin + 3, yPos - 2, 1.5, "F");
@@ -210,7 +212,8 @@ const AssessmentHistory = () => {
       }
 
       // Priority Actions
-      if (assessment.priority_actions && assessment.priority_actions.length > 0) {
+      const priorityActions = Array.isArray(assessment.priority_actions) ? assessment.priority_actions : [];
+      if (priorityActions.length > 0) {
         checkNewPage(60);
 
         doc.setTextColor(15, 30, 60);
@@ -220,11 +223,12 @@ const AssessmentHistory = () => {
 
         yPos += 8;
         doc.setDrawColor(200, 168, 87);
+        doc.setLineWidth(0.5);
         doc.line(margin, yPos, margin + 40, yPos);
 
         yPos += 10;
 
-        assessment.priority_actions.forEach((action, idx) => {
+        priorityActions.forEach((action, idx) => {
           checkNewPage(12);
           doc.setFillColor(22, 163, 74);
           doc.roundedRect(margin, yPos - 4, 5, 5, 1, 1, "F");
