@@ -45,16 +45,16 @@ export const useTaskProgress = () => {
 
     try {
       const { data, error } = await supabase
-        .from('user_task_progress')
-        .select('task_key, completed')
+        .from('user_tasks')
+        .select('task, is_completed')
         .eq('user_id', user.id);
 
       if (error) throw error;
 
       setTasks(currentTasks =>
         currentTasks.map(task => {
-          const savedTask = data.find(d => d.task_key === task.key);
-          return { ...task, completed: savedTask ? savedTask.completed : false };
+          const savedTask = data.find(d => d.task === task.key);
+          return { ...task, completed: savedTask ? savedTask.is_completed : false };
         })
       );
     } catch (error) {
@@ -84,11 +84,20 @@ export const useTaskProgress = () => {
     );
 
     try {
+      const taskToUpdate = initialTasks.find(t => t.key === taskKey);
+      if (!taskToUpdate) return;
+
       const { error } = await supabase
-        .from('user_task_progress')
+        .from('user_tasks')
         .upsert(
-          { user_id: user.id, task_key: taskKey, completed: newCompletedState },
-          { onConflict: 'user_id, task_key' }
+          { 
+            user_id: user.id, 
+            task: taskKey, 
+            is_completed: newCompletedState,
+            category: taskToUpdate.category,
+            premium: taskToUpdate.premium
+          },
+          { onConflict: 'user_id, task' }
         );
 
       if (error) {
