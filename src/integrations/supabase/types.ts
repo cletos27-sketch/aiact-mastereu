@@ -250,31 +250,30 @@ export type Database = {
       };
       user_tasks: {
         Row: {
-          premium: boolean
-          task_key: string | null
           category: string
           id: string
           is_completed: boolean
           premium: boolean
           task: string
+          task_key: string | null
           user_id: string
         }
-        Insert: { 
-          premium: boolean        
+        Insert: {
           category: string
           id?: string
           is_completed?: boolean
           premium?: boolean
           task: string
+          task_key?: string | null
           user_id: string
         }
         Update: {
-          premium: boolean
           category?: string
           id?: string
           is_completed?: boolean
           premium?: boolean
           task?: string
+          task_key?: string | null
           user_id?: string
         }
         Relationships: [
