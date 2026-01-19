@@ -27,61 +27,32 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <div id="google_translate_element" style="display: none;"></div>
-
-    <button id="custom_translate_button" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background-color: #0f172a; color: white; padding: 0.5rem 1rem; border-radius: 9999px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.5rem; border: 1px solid #334155; transition: all 0.2s ease-in-out;" onmouseover="this.style.backgroundColor='#1e293b'" onmouseout="this.style.backgroundColor='#0f172a'">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-      <span>Idioma</span>
-    </button>
-
+    <div id="google_translate_element" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
     <script type="text/javascript">
       function googleTranslateElementInit() {
         new google.translate.TranslateElement({
-          pageLanguage: 'pt',
-          includedLanguages: 'en,es,fr,de,it',
+          pageLanguage: 'pt', // Idioma original do seu site
+          includedLanguages: 'en,es,fr,de,it', // Idiomas que você quer oferecer
           layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
           autoDisplay: false
         }, 'google_translate_element');
       }
-
-      document.getElementById('custom_translate_button').addEventListener('click', function() {
-        var translateElement = document.querySelector('#google_translate_element select');
-        if(translateElement) {
-          // This is a bit of a hack to open the dropdown, as Google doesn't provide a direct API for it.
-          // We simulate a mouse event.
-          var event = new MouseEvent('mousedown', {
-            'view': window,
-            'bubbles': true,
-            'cancelable': true
-          });
-          translateElement.dispatchEvent(event);
-        }
-      });
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <style>
       /* Remove a barra superior feia do Google que empurra o site para baixo */
       body { top: 0 !important; }
       .goog-te-banner-frame.skiptranslate { display: none !important; }
-      
-      /* Esconde o ícone original do Google Translate */
       .goog-te-gadget-icon { display: none !important; }
-
-      /* Estilo para o dropdown que aparece */
-      .goog-te-menu-value {
-        border: none !important;
-        background: transparent !important;
-      }
+      
+      /* Ajusta o estilo do seletor para ficar mais limpo */
       .goog-te-gadget-simple {
-        background-color: #0f172a !important;
-        border: 1px solid #334155 !important;
-        border-radius: 8px !important;
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid #e2e8f0 !important;
         padding: 8px !important;
+        border-radius: 8px !important;
         font-family: sans-serif !important;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-      }
-      .goog-te-gadget-simple span {
-        color: white !important;
       }
     </style>
   </body>
