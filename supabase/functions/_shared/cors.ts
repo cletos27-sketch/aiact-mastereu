@@ -4,5 +4,13 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Esta é a função que o seu erro disse que estava faltando:
+// Esta é a função que o seu index.ts está chamando
 export const getCorsHeaders = () => corsHeaders;
+
+// Esta é a função que lida com o "Preflight" (o OPTIONS que está falhando)
+export const handleOptions = (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+  return null;
+};
