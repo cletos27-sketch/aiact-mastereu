@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, CheckCircle2, HelpCircle, Shield } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, HelpCircle, Shield, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth"; // Import useAuth
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { toast } from "sonner"; // Import sonner toast
 
 interface Question {
   id: number;
@@ -146,10 +148,11 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Assessment = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Get user from auth context
+  const { user, session } = useAuth(); // Get user and session from auth context
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [showHelp, setShowHelp] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Restore answers from localStorage if user refreshed or came back
   useEffect(() => {
@@ -182,54 +185,6 @@ const Assessment = () => {
     setAnswers({ ...answers, [currentQuestion.id]: value === "yes" });
   };
 
-  const calculateRiskClassification = useCallback((): { classification: RiskClassification; score: number; triggeredQuestions: number[] } => {
-    const prohibitedQuestions = [1, 2, 3, 4, 13];
-    const highRiskQuestions = [5, 6, 7, 8, 9, 10];
-    const limitedRiskQuestions = [11, 12, 14];
-    const outOfScopeQuestion = 15;
-
-    const triggeredQuestions: number[] = [];
-
-    // Check if out of scope first
-    if (answers[outOfScopeQuestion] === true) {
-      triggeredQuestions.push(outOfScopeQuestion);
-      return { classification: "FORA_DE_ESCOPO", score: 0, triggeredQuestions };
-    }
-
-    // Check prohibited practices (highest priority)
-    for (const qId of prohibitedQuestions) {
-      if (answers[qId] === true) {
-        triggeredQuestions.push(qId);
-      }
-    }
-    if (triggeredQuestions.length > 0) {
-      return { classification: "PROIBIDO", score: 100, triggeredQuestions };
-    }
-
-    // Check high risk
-    for (const qId of highRiskQuestions) {
-      if (answers[qId] === true) {
-        triggeredQuestions.push(qId);
-      }
-    }
-    if (triggeredQuestions.length > 0) {
-      return { classification: "ALTO_RISCO", score: 75, triggeredQuestions };
-    }
-
-    // Check limited risk
-    for (const qId of limitedRiskQuestions) {
-      if (answers[qId] === true) {
-        triggeredQuestions.push(qId);
-      }
-    }
-    if (triggeredQuestions.length > 0) {
-      return { classification: "RISCO_LIMITADO", score: 40, triggeredQuestions };
-    }
-
-    // All answers are "No" -> Minimal risk
-    return { classification: "RISCO_MINIMO", score: 10, triggeredQuestions: [] };
-  }, [answers]);
-
   // New function to handle finalization of the diagnostic
   const aoFinalizarDiagnostico = useCallback((dados: any) => {
     // 1. Salva no "bolso" do navegador (localStorage)
@@ -243,45 +198,75 @@ const Assessment = () => {
     }
   }, [navigate, user]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      const result = calculateRiskClassification();
-      
-      const questionsData = questions.map((q) => {
-        const answered = answers[q.id];
-        return {
-          id: q.id,
-          question: q.question,
-          category: q.category,
-          riskType: q.riskType,
-          legalReference: q.legalReference,
-          answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
-          triggersClassification: result.triggeredQuestions.includes(q.id),
+      // Final question, submit to Supabase Edge Function
+      setIsSubmitting(true);
+      try {
+        const formattedResponses = Object.keys(answers).reduce((acc, key) => {
+          acc[`q${key}`] = answers[parseInt(key)] ? "yes" : "no";
+          return acc;
+        }, {} as Record<string, string>);
+
+        const token = session?.access_token;
+        if (!token) {
+          toast.error("Você precisa estar logado para finalizar o diagnóstico.");
+          navigate('/login');
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('analyze-risk', {
+          body: JSON.stringify({ responses: formattedResponses }),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (error) {
+          console.error("Error invoking analyze-risk function:", error);
+          toast.error(`Erro ao analisar risco: ${error.message}`);
+          return;
+        }
+
+        const serverResult = data; // This is the response from your Edge Function
+
+        const questionsDataForDisplay = questions.map((q) => {
+          const answered = answers[q.id];
+          return {
+            id: q.id,
+            question: q.question,
+            category: q.category,
+            riskType: q.riskType,
+            legalReference: q.legalReference,
+            answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
+            triggersClassification: serverResult.triggeredQuestions.some((tq: any) => tq.question === `q${q.id}`),
+          };
+        });
+
+        const assessmentData = {
+          answers, 
+          riskScore: serverResult.riskScore, 
+          questionsData: questionsDataForDisplay,
+          riskClassification: serverResult.riskClassification,
+          triggeredQuestions: serverResult.triggeredQuestions,
+          timestamp: new Date().toISOString(),
         };
-      });
+        
+        // Clear session storage progress since assessment is complete
+        sessionStorage.removeItem("assessment_progress");
 
-      const riskScore = {
-        score: result.score,
-        maxScore: 100,
-        percentage: result.score,
-      };
+        // Use the new function to finalize the diagnostic
+        aoFinalizarDiagnostico(assessmentData);
 
-      const assessmentData = {
-        answers, 
-        riskScore, 
-        questionsData,
-        riskClassification: result.classification,
-        triggeredQuestions: result.triggeredQuestions,
-        timestamp: new Date().toISOString(),
-      };
-      
-      // Clear session storage progress since assessment is complete
-      sessionStorage.removeItem("assessment_progress");
-
-      // Use the new function to finalize the diagnostic
-      aoFinalizarDiagnostico(assessmentData);
+      } catch (error: any) {
+        console.error("Unexpected error during assessment submission:", error);
+        toast.error(`Erro inesperado: ${error.message}`);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -426,7 +411,7 @@ const Assessment = () => {
             <Button
               variant="outline"
               onClick={handleBack}
-              disabled={currentStep === 0}
+              disabled={currentStep === 0 || isSubmitting}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Anterior
@@ -434,10 +419,14 @@ const Assessment = () => {
             <Button
               variant={currentStep === questions.length - 1 ? "gold" : "default"}
               onClick={handleNext}
-              disabled={!hasAnswered}
+              disabled={!hasAnswered || isSubmitting}
             >
-              {currentStep === questions.length - 1 ? "Ver Resultado" : "Próxima"}
-              <ArrowRight className="w-4 h-4 ml-2" />
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ArrowRight className="w-4 h-4 ml-2" />
+              )}
+              {currentStep === questions.length - 1 ? (isSubmitting ? "Analisando..." : "Ver Resultado") : "Próxima"}
             </Button>
           </div>
         </div>
