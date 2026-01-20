@@ -99,7 +99,7 @@ serve(async (req) => {
         risk_classification: riskClassification
       }).catch(err => console.error("Erro ao salvar:", err));
     }
-    
+
       .select()
       .single();
 
@@ -116,15 +116,20 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    return new Response(JSON.stringify({ score, riskClassification: classification }), {
-      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-      status: 200
-    });
+    return new Response(
+      JSON.stringify({ 
+        score: complianceScore, 
+        riskClassification: riskClassification,
+        questionsData: answers // Devolvemos as respostas para o Results.tsx não quebrar
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
 
-  } } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-      status: 500
-    });
+  } catch (error: any) {
+    console.error("Erro fatal na função:", error.message);
+    return new Response(
+      JSON.stringify({ error: error.message, score: 0 }), 
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
-)
+});
