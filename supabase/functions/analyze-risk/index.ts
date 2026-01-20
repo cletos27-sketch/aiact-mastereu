@@ -73,16 +73,20 @@ serve(async (req: Request) => {
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 5. Retorno para o Frontend
-    return new Response(JSON.stringify({
-      riskScore: { 
-        score: complianceScore, 
-        maxScore: 100, 
-        percentage: complianceScore 
-      },
-      riskClassification,
-      triggeredQuestions,
-    }), {
+    // 5. Retorno para o Frontend (Ajustado para o Results.tsx)
+    const responseData = {
+      score: complianceScore, // O valor real (0, 30, 60, 90, 100)
+      maxScore: 100,
+      percentage: complianceScore,
+      riskClassification: riskClassification,
+      triggeredQuestions: triggeredQuestions,
+      status: "success",
+      timestamp: new Date().toISOString()
+    };
+
+    logStep("Sending response to frontend", responseData);
+
+    return new Response(JSON.stringify(responseData), {
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
       status: 200,
     });
