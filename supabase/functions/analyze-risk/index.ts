@@ -21,16 +21,11 @@ serve(async (req: Request) => {
   const optionsResponse = handleOptions(req);
   if (optionsResponse) return optionsResponse;
 
-
-
   // @ts-ignore
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-
   // @ts-ignore
-
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 
   if (!supabaseUrl || !supabaseAnonKey) {
