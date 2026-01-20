@@ -181,12 +181,18 @@ Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
 
     logStep("ERROR in analyze-risk", { message: errorMessage });
 
-    return new Response(JSON.stringify({ error: errorMessage }), {
-
+    // Retorno estruturado para o Results.tsx e Dashboard.tsx
+    return new Response(JSON.stringify({
+      riskScore: { 
+        score: complianceScore, 
+        maxScore: 100, 
+        percentage: complianceScore 
+      },
+      riskClassification,
+      triggeredQuestions,
+    }), {
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
-
-      status: 500,
-
+      status: 200,
     });
 
   }
