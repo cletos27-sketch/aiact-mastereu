@@ -194,7 +194,10 @@ Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
       status: 200,
     });
-
+} catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+      status: 500,
+    });
   }
-
 });
