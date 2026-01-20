@@ -31,8 +31,8 @@ serve(async (req) => {
     if (!user) throw new Error('User not found');
 
     // 2. Receber dados do Frontend
-    const { answers } = await req.json();
-    const safeAnswers = Array.isArray(answers) ? answers : [];
+    const body = await req.json().catch(() => ({}));
+    const answers = body.answers || [];
 
     // 3. Buscar informações das questões no Banco de Dados
     // Usando os nomes reais: question_text e risk_level
