@@ -32,9 +32,9 @@ serve(async (req) => {
 
     // 3. Buscar informações das questões no Banco de Dados
     // Usando os nomes reais: question_text e risk_level
-    const { data: allQuestions, error: dbError } = await supabaseClient
+    const { data: questions } = await supabaseClient
       .from('risk_questions')
-      .select('id, question_text, risk_level');
+      .select('id, risk_level');
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
