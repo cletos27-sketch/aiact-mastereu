@@ -85,7 +85,7 @@ serve(async (req) => {
       risk_score: score,
       risk_classification: classification
     });
-    
+
       .select()
       .single();
 
@@ -102,9 +102,9 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
-      status: 200,
+    return new Response(JSON.stringify({ score, riskClassification: classification }), {
+      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
+      status: 200
     });
 
   } catch (error: any) {
