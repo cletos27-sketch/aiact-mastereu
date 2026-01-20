@@ -93,7 +93,7 @@ const Results = () => {
     
     if (riskClassification === "ALTO_RISCO") {
       const articles = triggeredQs.map((q: QuestionData) => q.legalReference).join(", ");
-      return `O sistema é classificado como de alto risco conforme o Anexo III do Regulamento (UE) 2024/1689. Referências: ${articles}. São obrigatórias medidas de conformidade extensivas incluindo avaliação de conformidade, documentação técnica, e sistema de gestão de qualidade.`;
+      return `O sistema é classificado como de alto risco conforme o Anexo III do Regulamento (UE) 2024/1689. Referências: ${articles}. São obrigatórias medidas de conformidade extensivas.`;
     }
     
     if (riskClassification === "RISCO_LIMITADO") {
