@@ -97,6 +97,17 @@ serve(async (req) => {
 
     if (insertError) logStep("Warning: Could not save assessment", insertError);
 
+    // 8. Retorno para o Frontend
+    const responseData = {
+      score: complianceScore,
+      maxScore: 100,
+      percentage: complianceScore,
+      riskClassification: riskClassification,
+      triggeredQuestions: triggeredQuestions,
+      status: "success",
+      timestamp: new Date().toISOString()
+    };
+
     return new Response(JSON.stringify({ score, riskClassification: classification }), {
       headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
       status: 200
