@@ -22,11 +22,9 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // 1. Autenticação do Usuário
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    if (authError || !user) throw new Error("User not authenticated");
+    const authHeader = req.headers.get('Authorization')!;
+    const { data: { user } } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (!user) throw new Error('User not found');
 
     // 2. Receber dados do Frontend
     const { answers } = await req.json();
