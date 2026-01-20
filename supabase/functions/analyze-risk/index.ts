@@ -92,12 +92,14 @@ serve(async (req) => {
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
     // 6. Salvar Resultado
-    await supabaseClient.from('risk_assessments').insert({
-      user_id: user.id,
-      risk_score: score,
-      risk_classification: classification
-    });
-
+    if (userId) {
+      await supabaseClient.from('risk_assessments').insert({
+        user_id: userId,
+        risk_score: complianceScore,
+        risk_classification: riskClassification
+      }).catch(err => console.error("Erro ao salvar:", err));
+    }
+    
       .select()
       .single();
 
