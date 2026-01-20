@@ -105,26 +105,16 @@ const Results = () => {
 
   const getRelevantArticles = useCallback((): string[] => {
     const articles = new Set<string>();
-    
-    if (riskClassification === "PROIBIDO") {
-      articles.add("Artigo 5 - Práticas Proibidas");
-    }
+    if (riskClassification === "PROIBIDO") articles.add("Artigo 5 - Práticas Proibidas");
     if (riskClassification === "ALTO_RISCO") {
       articles.add("Artigo 6 - Sistemas de Alto Risco");
       articles.add("Anexo III - Lista de Áreas de Alto Risco");
-      articles.add("Artigo 9 - Gestão de Riscos");
-      articles.add("Artigo 10 - Dados e Governança de Dados");
     }
-    if (riskClassification === "RISCO_LIMITADO") {
-      articles.add("Artigo 52 - Obrigações de Transparência");
-    }
+    if (riskClassification === "RISCO_LIMITADO") articles.add("Artigo 52 - Obrigações de Transparência");
     
     questionsData?.filter((q: QuestionData) => q.triggersClassification).forEach((q: QuestionData) => {
       articles.add(q.legalReference);
     });
-    
-    articles.add("Artigo 4 - Literacia em IA");
-    
     return Array.from(articles);
   }, [questionsData, riskClassification]);
 
