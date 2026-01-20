@@ -58,19 +58,16 @@ const Results = () => {
   // Effect to load assessment data from location.state or localStorage
   useEffect(() => {
     if (location.state && !assessmentData) {
-      // Prioritize data from location.state if available
       setAssessmentData(location.state);
     } else if (!assessmentData) {
-      // If no data from location.state, try to load from localStorage
       const storedData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
       if (storedData) {
         try {
           const parsedData = JSON.parse(storedData);
           setAssessmentData(parsedData);
-          // The useAuth hook will clear PENDING_ASSESSMENT_KEY after saving to DB
         } catch (e) {
-          console.error("Error parsing pending assessment from localStorage:", e);
-          localStorage.removeItem(PENDING_ASSESSMENT_KEY); // Clear invalid data
+          console.error("Error parsing pending assessment:", e);
+          localStorage.removeItem(PENDING_ASSESSMENT_KEY);
         }
       }
     }
