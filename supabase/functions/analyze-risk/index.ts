@@ -11,7 +11,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
 
   try {
-    logStep("Function started");
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
 
     // Configuração do Cliente Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
