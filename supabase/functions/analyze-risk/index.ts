@@ -59,23 +59,22 @@ serve(async (req) => {
     // Verificação de "Fora de Escopo" ou "Risco Mínimo"
     const hasTriggeredAnything = triggeredQuestions.length > 0;
 
-    // 6. Lógica de Hierarquia (Score)
-    let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
-    let complianceScore = 90; 
+    // 5. Lógica de Score baseada em risk_level
+    let score = 90;
+    let classification = "RISCO_MINIMO";
+
+    const hasProhibited = triggered.some(q => q.risk_level === 'prohibited');
+    const hasHigh = triggered.some(q => q.risk_level === 'high');
+    const hasLimited = triggered.some(q => q.risk_level === 'limited');
 
     if (hasProhibited) {
-      riskClassification = "PROIBIDO";
-      complianceScore = 0;
-    } else if (hasHighRisk) {
-      riskClassification = "ALTO_RISCO";
-      complianceScore = 30;
-    } else if (hasLimitedRisk) {
-      riskClassification = "RISCO_LIMITADO";
-      complianceScore = 60;
-    } else if (!hasTriggeredAnything) {
-      // Se nenhuma pergunta de risco foi marcada como SIM
-      riskClassification = "FORA_DE_ESCOPO";
-      complianceScore = 100;
+      score = 0; classification = "PROIBIDO";
+    } else if (hasHigh) {
+      score = 30; classification = "ALTO_RISCO";
+    } else if (hasLimited) {
+      score = 60; classification = "RISCO_LIMITADO";
+    } else if (triggered.length === 0) {
+      score = 100; classification = "FORA_DE_ESCOPO";
     }
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
