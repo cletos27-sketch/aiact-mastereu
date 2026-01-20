@@ -14,14 +14,13 @@ serve(async (req: Request) => {
   const optionsResponse = handleOptions(req);
   if (optionsResponse) return optionsResponse;
 
-  // @ts-ignore
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  // @ts-ignore
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
   try {
     logStep("Function started");
+
+    // Configuração do Cliente Supabase
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // 1. Autenticação do Usuário
     const authHeader = req.headers.get("Authorization");
@@ -30,22 +29,39 @@ serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     if (authError || !user) throw new Error("User not authenticated");
 
-    // LÓGICA DE DETECÇÃO FLEXÍVEL
-const hasProhibited = triggeredQuestions.some(q => 
-  q.riskType?.toLowerCase().includes('prohibited') || q.riskType?.toLowerCase().includes('proibido')
-);
+    // 2. Receber dados do Frontend
+    const { answers } = await req.json();
+    logStep("Answers received", { count: answers?.length });
 
-const hasHighRisk = triggeredQuestions.some(q => 
-  q.riskType?.toLowerCase().includes('high') || q.riskType?.toLowerCase().includes('alto')
-);
+    // 3. Buscar informações das questões no Banco de Dados
+    // Usando os nomes reais: question_text e risk_level
+    const { data: allQuestions, error: dbError } = await supabaseClient
+      .from('risk_questions')
+      .select('id, question_text, risk_level');
 
-const hasLimitedRisk = triggeredQuestions.some(q => 
-  q.riskType?.toLowerCase().includes('limited') || q.riskType?.toLowerCase().includes('limitado')
-);
+    if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // 4. Lógica de Hierarquia (O Risco mais alto define a classificação)
+    // 4. Filtrar apenas as questões respondidas como "SIM" (true)
+    const triggeredQuestions = allQuestions.filter((q: any) => 
+      answers.some((a: any) => a.questionId === q.id && a.answer === true)
+    );
+
+    // 5. LÓGICA DE DETECÇÃO FLEXÍVEL
+    const hasProhibited = triggeredQuestions.some((q: any) => 
+      q.risk_level?.toLowerCase().includes('prohibited') || q.risk_level?.toLowerCase().includes('proibido')
+    );
+
+    const hasHighRisk = triggeredQuestions.some((q: any) => 
+      q.risk_level?.toLowerCase().includes('high') || q.risk_level?.toLowerCase().includes('alto')
+    );
+
+    const hasLimitedRisk = triggeredQuestions.some((q: any) => 
+      q.risk_level?.toLowerCase().includes('limited') || q.risk_level?.toLowerCase().includes('limitado')
+    );
+
+    // 6. Lógica de Hierarquia (Score)
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
-    let complianceScore = 90; // Valor padrão para risco mínimo
+    let complianceScore = 90; 
 
     if (hasProhibited) {
       riskClassification = "PROIBIDO";
@@ -56,16 +72,30 @@ const hasLimitedRisk = triggeredQuestions.some(q =>
     } else if (hasLimitedRisk) {
       riskClassification = "RISCO_LIMITADO";
       complianceScore = 60;
-    } else if (hasOutOfScope || triggeredQuestions.length === 0) {
+    } else if (triggeredQuestions.length === 0) {
       riskClassification = "FORA_DE_ESCOPO";
       complianceScore = 100;
     }
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 5. Retorno para o Frontend (Ajustado para o Results.tsx)
+    // 7. Salvar o Diagnóstico no Banco de Dados (Fundamental para o Dashboard)
+    const { data: assessment, error: insertError } = await supabaseClient
+      .from('risk_assessments')
+      .insert({
+        user_id: user.id,
+        risk_score: complianceScore,
+        risk_classification: riskClassification,
+        completed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) logStep("Warning: Could not save assessment", insertError);
+
+    // 8. Retorno para o Frontend
     const responseData = {
-      score: complianceScore, // O valor real (0, 30, 60, 90, 100)
+      score: complianceScore,
       maxScore: 100,
       percentage: complianceScore,
       riskClassification: riskClassification,
@@ -73,8 +103,6 @@ const hasLimitedRisk = triggeredQuestions.some(q =>
       status: "success",
       timestamp: new Date().toISOString()
     };
-
-    logStep("Sending response to frontend", responseData);
 
     return new Response(JSON.stringify(responseData), {
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
