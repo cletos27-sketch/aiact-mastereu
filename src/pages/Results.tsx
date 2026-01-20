@@ -51,8 +51,7 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 const Results = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const [assessmentData, setAssessmentData] = useState<any>(null); // State to hold the assessment data
-  
+  const [assessmentData, setAssessmentData] = useState<any>(null);
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
