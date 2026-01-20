@@ -79,15 +79,13 @@ serve(async (req) => {
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 7. Salvar o Diagnóstico no Banco de Dados (Fundamental para o Dashboard)
-    const { data: assessment, error: insertError } = await supabaseClient
-      .from('risk_assessments')
-      .insert({
-        user_id: user.id,
-        risk_score: complianceScore,
-        risk_classification: riskClassification,
-        completed_at: new Date().toISOString()
-      })
+    // 6. Salvar Resultado
+    await supabaseClient.from('risk_assessments').insert({
+      user_id: user.id,
+      risk_score: score,
+      risk_classification: classification
+    });
+    
       .select()
       .single();
 
