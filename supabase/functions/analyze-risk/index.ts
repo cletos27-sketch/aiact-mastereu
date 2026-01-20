@@ -46,7 +46,7 @@ serve(async (req: Request) => {
       answers.some((a: any) => a.questionId === q.id && a.answer === true)
     );
 
-    // 5. LÓGICA DE DETECÇÃO FLEXÍVEL
+    // 5. LÓGICA DE DETECÇÃO (Corrigida)
     const hasProhibited = triggeredQuestions.some((q: any) => 
       q.risk_level?.toLowerCase().includes('prohibited') || q.risk_level?.toLowerCase().includes('proibido')
     );
@@ -58,6 +58,9 @@ serve(async (req: Request) => {
     const hasLimitedRisk = triggeredQuestions.some((q: any) => 
       q.risk_level?.toLowerCase().includes('limited') || q.risk_level?.toLowerCase().includes('limitado')
     );
+
+    // Verificação de "Fora de Escopo" ou "Risco Mínimo"
+    const hasTriggeredAnything = triggeredQuestions.length > 0;
 
     // 6. Lógica de Hierarquia (Score)
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
@@ -72,7 +75,8 @@ serve(async (req: Request) => {
     } else if (hasLimitedRisk) {
       riskClassification = "RISCO_LIMITADO";
       complianceScore = 60;
-    } else if (triggeredQuestions.length === 0) {
+    } else if (!hasTriggeredAnything) {
+      // Se nenhuma pergunta de risco foi marcada como SIM
       riskClassification = "FORA_DE_ESCOPO";
       complianceScore = 100;
     }
