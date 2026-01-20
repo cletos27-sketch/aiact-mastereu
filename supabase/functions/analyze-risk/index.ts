@@ -105,24 +105,19 @@ serve(async (req) => {
 
     if (insertError) logStep("Warning: Could not save assessment", insertError);
 
-    // 8. Retorno para o Frontend
-    const responseData = {
-      score: complianceScore,
-      maxScore: 100,
-      percentage: complianceScore,
-      riskClassification: riskClassification,
-      triggeredQuestions: triggeredQuestions,
-      status: "success",
-      timestamp: new Date().toISOString()
+    // 8. Retorno Final Consolidado
+    const finalResponse = {
+      score: complianceScore || 0,
+      riskClassification: riskClassification || "RISCO_MINIMO",
+      questionsData: answers || [] // Crucial para o Results.tsx
     };
 
     return new Response(
-      JSON.stringify({ 
-        score: complianceScore, 
-        riskClassification: riskClassification,
-        questionsData: answers // Devolvemos as respostas para o Results.tsx não quebrar
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      JSON.stringify(finalResponse),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 200 
+      }
     );
 
   } catch (error: any) {
