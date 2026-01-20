@@ -18,16 +18,8 @@ const logStep = (step: string, details?: unknown) => {
 
 
 serve(async (req: Request) => {
-
-  // Handle CORS preflight
-
   const optionsResponse = handleOptions(req);
-
-  if (optionsResponse) {
-
-    return optionsResponse;
-
-  }
+  if (optionsResponse) return optionsResponse;
 
 
 
