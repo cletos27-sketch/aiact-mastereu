@@ -100,7 +100,7 @@ const Results = () => {
       return "O sistema está sujeito a obrigações de transparência específicas conforme o Artigo 52 do AI Act. Os utilizadores devem ser informados de que estão interagindo com um sistema de IA.";
     }
     
-    return "O sistema apresenta risco mínimo e não está sujeito a obrigações específicas do AI Act, além das boas práticas recomendadas.";
+    return "O sistema apresenta risco mínimo e não está sujeito a obrigações específicas do AI Act.";
   }, [questionsData, riskClassification]);
 
   const getRelevantArticles = useCallback((): string[] => {
