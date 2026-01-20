@@ -66,8 +66,8 @@ serve(async (req) => {
     const hasTriggeredAnything = triggeredQuestions.length > 0;
 
     // 5. Lógica de Score (Versão Robusta)
-    let score = 90;
-    let classification = "RISCO_MINIMO";
+    let complianceScore = 90;
+    let riskClassification = "RISCO_MINIMO";
 
     // Debug: Vamos ver o que está a chegar (verifique os logs do Supabase depois)
     console.log("Questões ativadas:", JSON.stringify(triggered));
