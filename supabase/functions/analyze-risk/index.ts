@@ -107,11 +107,10 @@ serve(async (req) => {
       status: 200
     });
 
-  } catch (error: any) {
-    logStep("ERROR in analyze-risk", { message: error.message });
+  } } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
-      status: 500,
+      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
+      status: 500
     });
   }
-});
+)
