@@ -48,29 +48,15 @@ serve(async (req: Request) => {
 
 
 
-  try {
+try {
+    const { responses, questions: clientQuestions } = await req.json();
+    if (!responses || !clientQuestions) throw new Error("Dados não fornecidos");
 
-    logStep("Function started");
-
-
-
-    const authHeader = req.headers.get("Authorization");
-
-    if (!authHeader) throw new Error("No authorization header provided");
-
-
-
-    const token = authHeader.replace("Bearer ", "");
-
-    const { data, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError) {
-
-      logStep("Authentication error", { error: authError.message });
-
-      throw new Error(`Authentication error: ${authError.message}`);
-
-    }
+    let hasProhibited = false;
+    let hasHighRisk = false;
+    let hasLimitedRisk = false;
+    let hasOutOfScope = false;
+    const triggeredQuestions = [];
 
     const user = data.user;
 
