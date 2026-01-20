@@ -83,7 +83,7 @@ try {
 
 
     // Prioridade de classificação: PROIBIDO > ALTO_RISCO > RISCO_LIMITADO > FORA_DE_ESCOPO > RISCO_MINIMO
-    
+
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
     let complianceScore = 90; // Score para Risco Mínimo
 
@@ -104,47 +104,15 @@ try {
 
 
     for (const q of clientQuestions) {
-
       const questionKey = `q${q.id}`;
-
       if (responses[questionKey] === "yes") {
-
-        triggeredQuestions.push({
-
-          question: questionKey,
-
-          riskType: q.riskType,
-
-        });
-
-
-
-        if (q.riskType === "prohibited") {
-
-          hasProhibited = true;
-
-          riskScore += 100; // Pontuação alta para proibido
-
-        } else if (q.riskType === "high") {
-
-          hasHighRisk = true;
-
-          riskScore += 50; // Pontuação média-alta para alto risco
-
-        } else if (q.riskType === "limited") {
-
-          hasLimitedRisk = true;
-
-          riskScore += 10; // Pontuação baixa para risco limitado
-
-        } else if (q.riskType === "out_of_scope") {
-
-          hasOutOfScope = true;
-
-        }
-
+        triggeredQuestions.push({ question: questionKey, riskType: q.riskType });
+        
+        if (q.riskType === "prohibited") hasProhibited = true;
+        else if (q.riskType === "high") hasHighRisk = true;
+        else if (q.riskType === "limited") hasLimitedRisk = true;
+        else if (q.riskType === "out_of_scope") hasOutOfScope = true;
       }
-
     }
 
 
