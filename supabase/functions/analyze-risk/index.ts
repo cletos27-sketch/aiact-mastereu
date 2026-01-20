@@ -5,17 +5,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 // @ts-ignore
 import { getCorsHeaders, handleOptions } from "../_shared/cors.ts";
 
-
-
 const logStep = (step: string, details?: unknown) => {
-
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-
   console.log(`[ANALYZE-RISK] ${step}${detailsStr}`);
-
 };
-
-
 
 serve(async (req: Request) => {
   const optionsResponse = handleOptions(req);
@@ -27,24 +20,17 @@ serve(async (req: Request) => {
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
+  try {
+    logStep("Function started");
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+    // 1. Autenticação do Usuário
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header provided");
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError || !user) throw new Error("User not authenticated");
 
-    logStep("ERROR: Missing Supabase environment variables");
-
-    return new Response(JSON.stringify({ error: "Missing environment variables" }), {
-
-      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
-
-      status: 500,
-
-    });
-
-  }
-
-  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-try {
+    // 2. Receber dados do Frontend
     const { responses, questions: clientQuestions } = await req.json();
     if (!responses || !clientQuestions) throw new Error("Dados não fornecidos");
 
@@ -54,27 +40,22 @@ try {
     let hasOutOfScope = false;
     const triggeredQuestions = [];
 
-    const user = data.user;
+    // 3. Analisar as respostas enviadas
+    for (const q of clientQuestions) {
+      const questionKey = `q${q.id}`;
+      if (responses[questionKey] === "yes") {
+        triggeredQuestions.push({ question: questionKey, riskType: q.riskType });
+        
+        if (q.riskType === "prohibited") hasProhibited = true;
+        else if (q.riskType === "high") hasHighRisk = true;
+        else if (q.riskType === "limited") hasLimitedRisk = true;
+        else if (q.riskType === "out_of_scope") hasOutOfScope = true;
+      }
+    }
 
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-
-    logStep("User authenticated", { userId: user.id, email: user.email });
-
-    const { responses, questions: clientQuestions } = await req.json(); // Recebe o array de questions
-
-    if (!responses || !clientQuestions) throw new Error("No responses or questions provided");
-
-    logStep("Received data", { responsesCount: Object.keys(responses).length, questionsCount: clientQuestions.length });
-
-    let riskScore = 0;
-
+    // 4. Lógica de Hierarquia (O Risco mais alto define a classificação)
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
-
-    const triggeredQuestions: Array<{ question: string; riskType: "prohibited" | "high" | "limited" | "out_of_scope"; }> = [];
-
-Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
-    let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
-    let complianceScore = 90; // Score para Risco Mínimo
+    let complianceScore = 90; // Valor padrão para risco mínimo
 
     if (hasProhibited) {
       riskClassification = "PROIBIDO";
@@ -90,98 +71,9 @@ Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
       complianceScore = 100;
     }
 
-    
-    for (const q of clientQuestions) {
-      const questionKey = `q${q.id}`;
-      if (responses[questionKey] === "yes") {
-        triggeredQuestions.push({ question: questionKey, riskType: q.riskType });
-        
-        if (q.riskType === "prohibited") hasProhibited = true;
-        else if (q.riskType === "high") hasHighRisk = true;
-        else if (q.riskType === "limited") hasLimitedRisk = true;
-        else if (q.riskType === "out_of_scope") hasOutOfScope = true;
-      }
-    }
+    logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-
-
-    // Determinar a classificação final com base na prioridade
-
-    if (hasOutOfScope) {
-
-      riskClassification = "FORA_DE_ESCOPO";
-
-      riskScore = 0; // Se está fora de escopo, não há risco pelo AI Act
-
-      // Limpar triggeredQuestions se for fora de escopo, exceto a própria pergunta de fora de escopo
-
-      triggeredQuestions.length = 0;
-
-      const outOfScopeQ = clientQuestions.find((q: any) => q.riskType === "out_of_scope" && responses[`q${q.id}`] === "yes");
-
-      if (outOfScopeQ) {
-
-        triggeredQuestions.push({ question: `q${outOfScopeQ.id}`, riskType: "out_of_scope" });
-
-      }
-
-    } else if (hasProhibited) {
-
-      riskClassification = "PROIBIDO";
-
-    } else if (hasHighRisk) {
-
-      riskClassification = "ALTO_RISCO";
-
-    } else if (hasLimitedRisk) {
-
-      riskClassification = "RISCO_LIMITADO";
-
-    } else if (riskScore > 0) {
-
-      riskClassification = "RISCO_MINIMO"; // Se houver respostas 'sim' mas não em categorias de risco mais altas
-
-    } else {
-
-      riskClassification = "RISCO_MINIMO"; // Padrão se nenhuma pergunta 'sim' ou nenhum trigger específico
-
-    }
-
-
-
-    // Garantir que o riskScore não exceda o máximo
-
-    const maxScore = 100;
-
-    const finalRiskScore = Math.min(riskScore, maxScore);
-
-    const percentage = (finalRiskScore / maxScore) * 100;
-
-
-
-    return new Response(JSON.stringify({
-
-      riskScore: { score: finalRiskScore, maxScore: maxScore, percentage: percentage },
-
-      riskClassification,
-
-      triggeredQuestions,
-
-    }), {
-
-      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
-
-      status: 200,
-
-    });
-
-  } catch (error) {
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    logStep("ERROR in analyze-risk", { message: errorMessage });
-
-    // Retorno estruturado para o Results.tsx e Dashboard.tsx
+    // 5. Retorno para o Frontend
     return new Response(JSON.stringify({
       riskScore: { 
         score: complianceScore, 
@@ -194,7 +86,9 @@ Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
       status: 200,
     });
-} catch (error) {
+
+  } catch (error: any) {
+    logStep("ERROR in analyze-risk", { message: error.message });
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
       status: 500,
