@@ -72,10 +72,7 @@ try {
 
     const triggeredQuestions: Array<{ question: string; riskType: "prohibited" | "high" | "limited" | "out_of_scope"; }> = [];
 
-
-
-    // Prioridade de classificação: PROIBIDO > ALTO_RISCO > RISCO_LIMITADO > FORA_DE_ESCOPO > RISCO_MINIMO
-
+Lógica de Hierarquia Corrigida (O mais grave vence o menos grave)
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
     let complianceScore = 90; // Score para Risco Mínimo
 
@@ -93,8 +90,7 @@ try {
       complianceScore = 100;
     }
 
-
-
+    
     for (const q of clientQuestions) {
       const questionKey = `q${q.id}`;
       if (responses[questionKey] === "yes") {
