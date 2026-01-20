@@ -42,11 +42,7 @@ serve(async (req: Request) => {
 
   }
 
-
-
   const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-
 
 try {
     const { responses, questions: clientQuestions } = await req.json();
@@ -64,15 +60,11 @@ try {
 
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-
-
     const { responses, questions: clientQuestions } = await req.json(); // Recebe o array de questions
 
     if (!responses || !clientQuestions) throw new Error("No responses or questions provided");
 
     logStep("Received data", { responsesCount: Object.keys(responses).length, questionsCount: clientQuestions.length });
-
-
 
     let riskScore = 0;
 
