@@ -76,18 +76,18 @@ const Results = () => {
       }
     }
   }, [location.state, assessmentData]);
-
-  // If no assessment data is available, redirect to assessment page
-  if (!assessmentData) {
-    return <Navigate to="/assessment" replace />;
-  }
-
+  
   // Destructure data from assessmentData state
   const { questionsData, riskClassification } = assessmentData; // riskScore e triggeredQuestions removidos
 
   const generateLegalJustification = useCallback((): string => {
     const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
-    
+
+    // If no assessment data is available, redirect to assessment page
+  if (!assessmentData) {
+    return <Navigate to="/assessment" replace />;
+  }
+
     if (riskClassification === "FORA_DE_ESCOPO") {
       return "Conforme Artigo 2(5)(c) do Regulamento (UE) 2024/1689, sistemas de IA desenvolvidos ou utilizados exclusivamente para fins pessoais não profissionais estão fora do âmbito de aplicação do AI Act.";
     }
