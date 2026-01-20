@@ -83,14 +83,23 @@ try {
 
 
     // Prioridade de classificação: PROIBIDO > ALTO_RISCO > RISCO_LIMITADO > FORA_DE_ESCOPO > RISCO_MINIMO
+    
+    let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
+    let complianceScore = 90; // Score para Risco Mínimo
 
-    let hasProhibited = false;
-
-    let hasHighRisk = false;
-
-    let hasLimitedRisk = false;
-
-    let hasOutOfScope = false;
+    if (hasProhibited) {
+      riskClassification = "PROIBIDO";
+      complianceScore = 0;
+    } else if (hasHighRisk) {
+      riskClassification = "ALTO_RISCO";
+      complianceScore = 30;
+    } else if (hasLimitedRisk) {
+      riskClassification = "RISCO_LIMITADO";
+      complianceScore = 60;
+    } else if (hasOutOfScope || triggeredQuestions.length === 0) {
+      riskClassification = "FORA_DE_ESCOPO";
+      complianceScore = 100;
+    }
 
 
 
