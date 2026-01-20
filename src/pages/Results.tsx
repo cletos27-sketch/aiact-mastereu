@@ -76,8 +76,9 @@ const Results = () => {
   if (!assessmentData) {
     return <Navigate to="/assessment" replace />;
   }
-
+  
   const { questionsData, riskClassification } = assessmentData;
+
   const generateLegalJustification = useCallback((): string => {
   const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
     
