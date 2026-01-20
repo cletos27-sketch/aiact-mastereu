@@ -7,9 +7,8 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[ANALYZE-RISK] ${step}${detailsStr}`);
 };
 
-serve(async (req: Request) => {
-  const optionsResponse = handleOptions(req);
-  if (optionsResponse) return optionsResponse;
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return handleOptions(req);
 
   try {
     logStep("Function started");
