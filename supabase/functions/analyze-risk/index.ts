@@ -38,8 +38,7 @@ serve(async (req) => {
     const answers = body.answers || [];
 
     // 3. Buscar informações das questões no Banco de Dados
-    // Usando os nomes reais: question_text e risk_level
-    const { data: questions } = await supabaseClient
+    const { data: allQuestions } = await supabaseClient
       .from('risk_questions')
       .select('id, risk_level');
 
