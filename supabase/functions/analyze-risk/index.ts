@@ -59,22 +59,28 @@ serve(async (req) => {
     // Verificação de "Fora de Escopo" ou "Risco Mínimo"
     const hasTriggeredAnything = triggeredQuestions.length > 0;
 
-    // 5. Lógica de Score baseada em risk_level
+    // 5. Lógica de Score (Versão Robusta)
     let score = 90;
     let classification = "RISCO_MINIMO";
 
-    const hasProhibited = triggered.some(q => q.risk_level === 'prohibited');
-    const hasHigh = triggered.some(q => q.risk_level === 'high');
-    const hasLimited = triggered.some(q => q.risk_level === 'limited');
+    // Debug: Vamos ver o que está a chegar (verifique os logs do Supabase depois)
+    console.log("Questões ativadas:", JSON.stringify(triggered));
 
-    if (hasProhibited) {
-      score = 0; classification = "PROIBIDO";
-    } else if (hasHigh) {
-      score = 30; classification = "ALTO_RISCO";
-    } else if (hasLimited) {
-      score = 60; classification = "RISCO_LIMITADO";
+    const levels = triggered.map(t => String(t.risk_level).toLowerCase().trim());
+    
+    // Verificamos se alguma das questões ativadas tem o nível correspondente
+    if (levels.includes('prohibited') || levels.includes('proibido')) {
+      score = 0; 
+      classification = "PROIBIDO";
+    } else if (levels.includes('high') || levels.includes('alto')) {
+      score = 30; 
+      classification = "ALTO_RISCO";
+    } else if (levels.includes('limited') || levels.includes('limitado')) {
+      score = 60; 
+      classification = "RISCO_LIMITADO";
     } else if (triggered.length === 0) {
-      score = 100; classification = "FORA_DE_ESCOPO";
+      score = 100; 
+      classification = "FORA_DE_ESCOPO";
     }
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
@@ -90,17 +96,6 @@ serve(async (req) => {
       .single();
 
     if (insertError) logStep("Warning: Could not save assessment", insertError);
-
-    // 8. Retorno para o Frontend
-    const responseData = {
-      score: complianceScore,
-      maxScore: 100,
-      percentage: complianceScore,
-      riskClassification: riskClassification,
-      triggeredQuestions: triggeredQuestions,
-      status: "success",
-      timestamp: new Date().toISOString()
-    };
 
     return new Response(JSON.stringify({ score, riskClassification: classification }), {
       headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
