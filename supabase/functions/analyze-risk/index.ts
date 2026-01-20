@@ -30,28 +30,18 @@ serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     if (authError || !user) throw new Error("User not authenticated");
 
-    // 2. Receber dados do Frontend
-    const { responses, questions: clientQuestions } = await req.json();
-    if (!responses || !clientQuestions) throw new Error("Dados não fornecidos");
+    // LÓGICA DE DETECÇÃO FLEXÍVEL
+const hasProhibited = triggeredQuestions.some(q => 
+  q.riskType?.toLowerCase().includes('prohibited') || q.riskType?.toLowerCase().includes('proibido')
+);
 
-    let hasProhibited = false;
-    let hasHighRisk = false;
-    let hasLimitedRisk = false;
-    let hasOutOfScope = false;
-    const triggeredQuestions = [];
+const hasHighRisk = triggeredQuestions.some(q => 
+  q.riskType?.toLowerCase().includes('high') || q.riskType?.toLowerCase().includes('alto')
+);
 
-    // 3. Analisar as respostas enviadas
-    for (const q of clientQuestions) {
-      const questionKey = `q${q.id}`;
-      if (responses[questionKey] === "yes") {
-        triggeredQuestions.push({ question: questionKey, riskType: q.riskType });
-        
-        if (q.riskType === "prohibited") hasProhibited = true;
-        else if (q.riskType === "high") hasHighRisk = true;
-        else if (q.riskType === "limited") hasLimitedRisk = true;
-        else if (q.riskType === "out_of_scope") hasOutOfScope = true;
-      }
-    }
+const hasLimitedRisk = triggeredQuestions.some(q => 
+  q.riskType?.toLowerCase().includes('limited') || q.riskType?.toLowerCase().includes('limitado')
+);
 
     // 4. Lógica de Hierarquia (O Risco mais alto define a classificação)
     let riskClassification: "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO" = "RISCO_MINIMO";
