@@ -72,21 +72,21 @@ serve(async (req) => {
     // Debug: Vamos ver o que está a chegar (verifique os logs do Supabase depois)
     console.log("Questões ativadas:", JSON.stringify(triggered));
 
-    const levels = triggered.map(t => String(t.risk_level).toLowerCase().trim());
+    const levels = triggered.map((q: any) => String(q.risk_level).toLowerCase().trim());
     
     // Verificamos se alguma das questões ativadas tem o nível correspondente
     if (levels.includes('prohibited') || levels.includes('proibido')) {
-      score = 0; 
-      classification = "PROIBIDO";
+      complianceScore = 0;
+      riskClassification = "PROIBIDO";
     } else if (levels.includes('high') || levels.includes('alto')) {
-      score = 30; 
-      classification = "ALTO_RISCO";
+      complianceScore = 30;
+      riskClassification = "ALTO_RISCO";
     } else if (levels.includes('limited') || levels.includes('limitado')) {
-      score = 60; 
-      classification = "RISCO_LIMITADO";
+      complianceScore = 60;
+      riskClassification = "RISCO_LIMITADO";
     } else if (triggered.length === 0) {
-      score = 100; 
-      classification = "FORA_DE_ESCOPO";
+      complianceScore = 100;
+      riskClassification = "FORA_DE_ESCOPO";
     }
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
