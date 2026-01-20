@@ -38,9 +38,9 @@ serve(async (req) => {
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // 4. Filtrar apenas as questões respondidas como "SIM" (true)
-    const triggeredQuestions = allQuestions.filter((q: any) => 
-      answers.some((a: any) => a.questionId === q.id && a.answer === true)
+    // 4. Filtrar questões ativadas (Sim)
+    const triggered = (questions || []).filter(q => 
+      safeAnswers.some((a: any) => a.questionId === q.id && a.answer === true)
     );
 
     // 5. LÓGICA DE DETECÇÃO (Corrigida)
