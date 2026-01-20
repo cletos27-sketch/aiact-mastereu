@@ -12,7 +12,7 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return handleOptions(req);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const supabaseClient = createClient(
