@@ -26,9 +26,12 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // 1. Autenticação do Usuário
-    const authHeader = req.headers.get('Authorization')!;
-    const { data: { user } } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) throw new Error('User not found');
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+    if (authHeader) {
+      const { data } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      userId = data?.user?.id;
+    }
 
     // 2. Receber dados do Frontend
     const body = await req.json().catch(() => ({}));
