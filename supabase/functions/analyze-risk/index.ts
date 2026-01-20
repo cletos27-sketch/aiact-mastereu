@@ -28,7 +28,7 @@ serve(async (req) => {
 
     // 2. Receber dados do Frontend
     const { answers } = await req.json();
-    logStep("Answers received", { count: answers?.length });
+    const safeAnswers = Array.isArray(answers) ? answers : [];
 
     // 3. Buscar informações das questões no Banco de Dados
     // Usando os nomes reais: question_text e risk_level
