@@ -278,9 +278,7 @@ const Assessment = () => {
         triggersClassification: isTriggered
       };
     }); 
-    
-    // <--- Verifique se este parêntese e ponto-e-vírgula estão aqui
-
+        
     // 2. Montar o objeto de dados final
     const assessmentData = {
       answers,
