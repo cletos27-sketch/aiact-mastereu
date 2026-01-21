@@ -259,9 +259,8 @@ const Assessment = () => {
             triggeredQuestions: triggeredQuestions.map(q => ({ question: `q${q.id}`, riskType: q.riskType })),
           };
         }
-
-        / 1. Criar os dados para exibição com segurança absoluta
-    const questionsDataForDisplay = (questions || []).map((q) => {
+       
+      const questionsDataForDisplay = (questions || []).map((q) => {
       const answered = answers[q.id];
       
       // Proteção contra o erro 'some': verifica se serverResult e triggeredQuestions existem
