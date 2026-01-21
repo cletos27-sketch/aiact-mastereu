@@ -25,14 +25,12 @@ const Assessment = () => {
   // 2. Carregar questões do banco
   useEffect(() => {
     const fetchQuestions = async () => {
-      try {
-        const { data, error } = await supabase
+      try {        
           const { data, error } = await supabase
-          .from ("risk_questions" as any).select("*")
+          .from ("risk_questions" as any)
+          .select("*");
           .order("id");
-          .select("*")
-          .order("id");
-        if (error) throw error;
+          if (error) throw error;
         setQuestions(data || []);
       } catch (error: any) {
         toast.error("Erro ao carregar questões");
