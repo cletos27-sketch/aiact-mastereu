@@ -48,31 +48,11 @@ const Results = () => {
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  // Effect to load assessment data from location.state or localStorage
-  useEffect(() => {
-    if (location.state && !assessmentData) {
-      setAssessmentData(location.state);
-    } else if (!assessmentData) {
-      const storedData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
-      if (storedData) {
-        try {
-          const parsedData = JSON.parse(storedData);
-          setAssessmentData(parsedData);
-        } catch (e) {
-          console.error("Error parsing pending assessment:", e);
-          localStorage.removeItem(PENDING_ASSESSMENT_KEY);
-        }
-      }
-    }
-  }, [location.state, assessmentData]);
-    
-  if (!assessmentData) {
-    return <Navigate to="/assessment" replace />;
-  }
+  // 1. Definindo variáveis de estado derivadas no topo, com fallback seguro.
+  const questionsData = assessmentData?.questionsData || [];
+  const riskClassification = assessmentData?.riskClassification || "RISCO_MINIMO";
 
-  const { questionsData, riskClassification } = assessmentData;
-
-  // --- START: useCallback definitions moved here (after conditional return) ---
+  // 2. Movendo todos os useCallbacks para o topo, antes do retorno condicional.
 
   const generateLegalJustification = useCallback((): string => {
     const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
@@ -366,7 +346,33 @@ const Results = () => {
     }
   }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
 
-  // --- END: useCallback definitions moved here ---
+  // Effect to load assessment data from location.state or localStorage
+  useEffect(() => {
+    if (location.state && !assessmentData) {
+      setAssessmentData(location.state);
+      // Limpa o localStorage após carregar o estado
+      localStorage.removeItem(PENDING_ASSESSMENT_KEY);
+    } else if (!assessmentData) {
+      const storedData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          setAssessmentData(parsedData);
+        } catch (e) {
+          console.error("Error parsing pending assessment:", e);
+          localStorage.removeItem(PENDING_ASSESSMENT_KEY);
+        }
+      }
+    }
+  }, [location.state, assessmentData]);
+    
+  if (!assessmentData) {
+    return <Navigate to="/assessment" replace />;
+  }
+
+  // Variáveis já definidas no topo: questionsData, riskClassification
+
+  const triggeredQuestionsData = questionsData.filter((q: QuestionData) => q.triggersClassification);
 
   const riskConfig = {
     PROIBIDO: {
@@ -413,8 +419,6 @@ const Results = () => {
 
   const config = riskConfig[riskClassification as RiskClassification]; // Adicionado type assertion
   const Icon = config.icon;
-
-  const triggeredQuestionsData = questionsData.filter((q: QuestionData) => q.triggersClassification);
 
   const requiredDocuments = [
     {
