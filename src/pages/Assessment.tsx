@@ -9,10 +9,6 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 
-const _logStep = (step: string, details?: any) => {
-  console.log(`[ASSESSMENT] ${step}`, details || "");
-};
-
 const Assessment = () => {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
