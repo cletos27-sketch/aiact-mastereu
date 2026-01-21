@@ -246,7 +246,7 @@ const AssessmentHistory = () => {
       }
 
       // Footer
-      const totalPages = doc.internal.pages.length - 1;
+      const totalPages = doc.internal.pages.length; // Corrigido: Usar o número total de páginas
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFillColor(15, 30, 60);

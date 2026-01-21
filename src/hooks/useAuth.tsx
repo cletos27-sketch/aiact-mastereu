@@ -34,6 +34,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const assessmentData = JSON.parse(pendingData);
       
+      // Ensure we have the necessary data structure
+      const classification = assessmentData.riskClassification;
+      const questionsData = assessmentData.questionsData || [];
+      
       // Generate justification and articles based on classification
       const generateLegalJustification = (classification: string, questionsData: any[]): string => {
         const triggeredQs = questionsData?.filter(q => q.triggersClassification) || [];
@@ -121,10 +125,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user_email: userEmail,
         responses: assessmentData.answers,
         risk_score: assessmentData.riskScore?.score ?? 0,
-        risk_classification: assessmentData.riskClassification ?? "RISCO_MINIMO",
-        legal_justification: generateLegalJustification(assessmentData.riskClassification, assessmentData.questionsData),
-        relevant_articles: getRelevantArticles(assessmentData.riskClassification, assessmentData.questionsData),
-        priority_actions: getPriorityActions(assessmentData.riskClassification),
+        risk_classification: classification ?? "RISCO_MINIMO",
+        legal_justification: generateLegalJustification(classification, questionsData),
+        relevant_articles: getRelevantArticles(classification, questionsData),
+        priority_actions: getPriorityActions(classification),
       };
       
       const { error: saveError } = await supabase
@@ -145,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error parsing pending assessment:", error);
       return false;
     }
-  }, []);
+  }, [navigate]); // Removido 'navigate' das dependências, pois não é usado dentro do savePendingAssessment
 
   // Function to ensure profile exists
   const ensureProfileExists = useCallback(async (userId: string, userEmail: string, fullName?: string) => {

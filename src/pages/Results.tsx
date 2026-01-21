@@ -344,8 +344,8 @@ const Results = () => {
         yPos += 4;
       });
 
-      // Footer on all pages
-      const totalPages = doc.internal.pages.length - 1;
+      // Footer
+      const totalPages = doc.internal.pages.length; // Corrigido: Usar o número total de páginas
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFillColor(15, 30, 60);
