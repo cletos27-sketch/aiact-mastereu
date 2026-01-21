@@ -15,12 +15,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    // Configuração do Cliente Supabase
+    // CORREÇÃO: Declaramos o cliente apenas UMA vez
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
@@ -29,16 +24,16 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let userId = null;
     if (authHeader) {
-      const { data } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
-      userId = data?.user?.id;
+      const { data: userData } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      userId = userData?.user?.id;
     }
 
-    // 2. Receber dados do Frontend
+    // 2. Receber dados do Frontend (com trava de segurança)
     const body = await req.json().catch(() => ({}));
     const answers = body.answers || [];
 
     // 3. Buscar informações das questões no Banco de Dados
-    const { data: allQuestions } = await supabaseClient
+    const { data: allQuestions, error: dbError } = await supabaseClient
       .from('risk_questions')
       .select('id, risk_level');
 
@@ -49,32 +44,14 @@ serve(async (req) => {
       answers.some((a: any) => String(a.questionId) === String(q.id) && a.answer === true)
     );
 
-    // 5. LÓGICA DE DETECÇÃO (Corrigida)
-    const hasProhibited = triggeredQuestions.some((q: any) => 
-      q.risk_level?.toLowerCase().includes('prohibited') || q.risk_level?.toLowerCase().includes('proibido')
-    );
-
-    const hasHighRisk = triggeredQuestions.some((q: any) => 
-      q.risk_level?.toLowerCase().includes('high') || q.risk_level?.toLowerCase().includes('alto')
-    );
-
-    const hasLimitedRisk = triggeredQuestions.some((q: any) => 
-      q.risk_level?.toLowerCase().includes('limited') || q.risk_level?.toLowerCase().includes('limitado')
-    );
-
-    // Verificação de "Fora de Escopo" ou "Risco Mínimo"
-    const hasTriggeredAnything = triggeredQuestions.length > 0;
-
-    // 5. Lógica de Score (Versão Robusta)
+    // 5. Lógica de Score
     let complianceScore = 90;
     let riskClassification = "RISCO_MINIMO";
 
-    // Debug: Vamos ver o que está a chegar (verifique os logs do Supabase depois)
-    console.log("Questões ativadas:", JSON.stringify(triggered));
+    logStep("Questões ativadas", triggered);
 
     const levels = triggered.map((q: any) => String(q.risk_level).toLowerCase().trim());
     
-    // Verificamos se alguma das questões ativadas tem o nível correspondente
     if (levels.includes('prohibited') || levels.includes('proibido')) {
       complianceScore = 0;
       riskClassification = "PROIBIDO";
@@ -91,30 +68,26 @@ serve(async (req) => {
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 6. Salvar Resultado
+    // 6. Salvar Resultado com tratamento de erro
     if (userId) {
-      await supabaseClient.from('risk_assessments').insert({
+      const { error: insertError } = await supabaseClient.from('risk_assessments').insert({
         user_id: userId,
         risk_score: complianceScore,
         risk_classification: riskClassification
-      }).catch(err => console.error("Erro ao salvar:", err));
+      });
+      if (insertError) logStep("Warning: Could not save assessment", insertError);
     }      
-
-    if (insertError) logStep("Warning: Could not save assessment", insertError);
 
     // 8. Retorno Final Consolidado
     const finalResponse = {
-      score: complianceScore || 0,
-      riskClassification: riskClassification || "RISCO_MINIMO",
-      questionsData: answers || [] // Crucial para o Results.tsx
+      score: complianceScore,
+      riskClassification: riskClassification,
+      questionsData: answers
     };
 
     return new Response(
       JSON.stringify(finalResponse),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-        status: 200 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error: any) {
