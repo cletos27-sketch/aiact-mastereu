@@ -263,11 +263,11 @@ const Assessment = () => {
       const questionsDataForDisplay = (questions || []).map((q) => {
       const answered = answers[q.id];
       
-      // Proteção contra o erro 'some': verifica se serverResult e triggeredQuestions existem
+      // Proteção contra o erro 'some'
       const isTriggered = Array.isArray(serverResult?.triggeredQuestions) 
         ? serverResult.triggeredQuestions.some((tq: any) => String(tq.id || tq.question_id) === String(q.id))
         : false;
-        
+
       return {
         id: q.id,
         question: q.question,
@@ -277,7 +277,16 @@ const Assessment = () => {
         answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
         triggersClassification: isTriggered
       };
-    });
+    }); // <--- Verifique se este parêntese e ponto-e-vírgula estão aqui
+
+    // 2. Montar o objeto de dados final
+    const assessmentData = {
+      answers,
+      riskScore: typeof serverResult?.score === 'number' ? serverResult.score : 0,
+      questionsData: questionsDataForDisplay,
+      riskClassification: serverResult?.riskClassification || "RISCO_MINIMO",
+      timestamp: new Date().toISOString(),
+    };
 
     // 2. Montar o objeto de dados final para a página de Resultados
     const assessmentData = {
