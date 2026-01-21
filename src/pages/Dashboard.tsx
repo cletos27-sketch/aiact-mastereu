@@ -282,7 +282,7 @@ const Dashboard = () => {
         legal_justification: latestAssessment.legal_justification,
         relevant_articles: latestAssessment.relevant_articles,
         priority_actions: latestAssessment.priority_actions,
-      } : undefined, 'en'); // <-- Pass 'en' here
+      } : undefined, 'pt'); // <-- Revertido para 'pt'
     } catch (error) {
       console.error("Error generating AI Literacy Guide:", error);
     } finally {

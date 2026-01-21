@@ -675,7 +675,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                     legal_justification: latestAssessment.legal_justification,
                     relevant_articles: latestAssessment.relevant_articles,
                     priority_actions: latestAssessment.priority_actions,
-                  } : undefined, 'en'); // <-- Pass 'en' here
+                  } : undefined, 'pt'); // <-- Revertido para 'pt'
                 })}
                 className="flex items-center gap-2"
                 disabled={purchaseLoading || generatingPDF === "literacia"}

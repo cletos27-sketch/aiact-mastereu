@@ -1,6 +1,5 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
-import { useEffect, useState, useCallback } from "react"; // useRef e supabase removidos
-// import { supabase } from "@/integrations/supabase/client"; // Removido: não utilizado diretamente aqui
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import PricingCards from "@/components/PricingCards";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
-import { toast } from "sonner"; // Import toast from sonner
+import { toast } from "sonner";
 import jsPDF from "jspdf";
 import {
   AlertTriangle,
@@ -27,12 +26,6 @@ import {
   ShieldOff,
   Users,
 } from "lucide-react";
-
-// interface RiskScore { // Removido: não utilizado
-//   score: number;
-//   maxScore: number;
-//   percentage: number;
-// }
 
 interface QuestionData {
   id: number;
@@ -78,6 +71,8 @@ const Results = () => {
   }
 
   const { questionsData, riskClassification } = assessmentData;
+
+  // --- START: useCallback definitions moved here (after conditional return) ---
 
   const generateLegalJustification = useCallback((): string => {
     const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
@@ -370,6 +365,8 @@ const Results = () => {
       setIsGeneratingPDF(false);
     }
   }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
+
+  // --- END: useCallback definitions moved here ---
 
   const riskConfig = {
     PROIBIDO: {
