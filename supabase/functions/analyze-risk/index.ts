@@ -1,11 +1,12 @@
 // @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // @ts-ignore
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+// import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"; // Removed unused import
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -13,72 +14,62 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[ANALYZE-RISK] ${step}${detailsStr}`);
 };
 
-interface QuestionData {
+interface TriggeredQuestion {
   id: number;
-  risk_level: string;
+  riskType: string;
+  legalReference: string;
 }
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    // @ts-ignore
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    // @ts-ignore
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-    // 2. Receber dados do Frontend (esperando 'answers')
+    // 1. Receber dados do Frontend (esperando 'triggeredQuestions')
     const body = await req.json().catch(() => ({}));
-    const answers = body.answers || []; 
+    const triggeredQuestions = body.triggeredQuestions as TriggeredQuestion[] || []; 
 
-    if (!Array.isArray(answers)) {
-        throw new Error("Invalid input format: 'answers' must be an array.");
+    if (!Array.isArray(triggeredQuestions)) {
+        throw new Error("Invalid input format: 'triggeredQuestions' must be an array.");
     }
 
-    // 3. Buscar informações das questões no Banco de Dados
-    // NOTE: Assuming 'risk_questions' table exists and contains 'id' and 'risk_level'
-    const { data: allQuestions, error: dbError } = await supabaseClient
-      .from('risk_questions')
-      .select('id, risk_level');
-
-    if (dbError) throw new Error(`Database error: ${dbError.message}`);
-
-    // 4. Filtrar questões ativadas (Sim)
-    const triggered = (allQuestions || []).filter((q: any) => 
-      answers.some((a: any) => String(a.questionId) === String(q.id) && a.answer === true)
-    );
-
-    // 5. Lógica de Score
+    // 2. Lógica de Score e Classificação
     let complianceScore = 90;
     let riskClassification = "RISCO_MINIMO";
 
-    logStep("Questões ativadas", triggered);
+    logStep("Questões ativadas", triggeredQuestions);
 
-    const levels = triggered.map((q: QuestionData) => String(q.risk_level).toLowerCase().trim());
+    const levels = triggeredQuestions.map(q => String(q.riskType).toLowerCase().trim());
     
-    if (levels.includes('prohibited') || levels.includes('proibido')) {
+    // Check for 'out_of_scope' first (Question 15)
+    if (levels.includes('out_of_scope')) {
+        complianceScore = 100;
+        riskClassification = "FORA_DE_ESCOPO";
+    } else if (levels.includes('prohibited')) {
       complianceScore = 0;
       riskClassification = "PROIBIDO";
-    } else if (levels.includes('high') || levels.includes('alto')) {
+    } else if (levels.includes('high')) {
       complianceScore = 30;
       riskClassification = "ALTO_RISCO";
-    } else if (levels.includes('limited') || levels.includes('limitado')) {
+    } else if (levels.includes('limited')) {
       complianceScore = 60;
       riskClassification = "RISCO_LIMITADO";
-    } else if (triggered.length === 0) {
+    } else if (triggeredQuestions.length === 0) {
       complianceScore = 100;
-      riskClassification = "FORA_DE_ESCOPO";
+      riskClassification = "RISCO_MINIMO"; // If no questions answered 'yes', it's minimal risk
     }
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 6. Retorno Final Consolidado
+    // 3. Retorno Final Consolidado
     const finalResponse = {
       score: complianceScore,
       riskClassification: riskClassification,
-      // Retornando as questões ativadas para o frontend
-      triggeredQuestions: triggered.map((q: QuestionData) => ({ id: q.id, risk_level: q.risk_level }))
+      // Retornando as questões ativadas para o frontend (incluindo legalReference)
+      triggeredQuestions: triggeredQuestions.map(q => ({ 
+        id: q.id, 
+        riskType: q.riskType,
+        legalReference: q.legalReference
+      }))
     };
 
     return new Response(

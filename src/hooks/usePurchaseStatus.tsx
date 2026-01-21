@@ -33,6 +33,7 @@ export const usePurchaseStatus = () => {
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousStatusRef = useRef<PurchaseStatus>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null); // Ref to hold the channel instance
 
   // Determine access level based on price_id
   const getAccessLevel = (priceId: string | null): AccessLevel => {
@@ -198,15 +199,25 @@ export const usePurchaseStatus = () => {
     if (authLoading || !user) {
       setIsRealtimeConnected(false);
       stopPolling();
+      // Cleanup existing channel if user logs out
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       return;
     }
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    // Cleanup previous channel if effect re-runs (e.g., user data update)
+    if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+    }
+
     let connectionAttempted = false;
 
     const setupRealtime = () => {
       try {
-        channel = supabase
+        const channel = supabase
           .channel(`purchase_status_${user.id}_${Date.now()}`)
           .on(
             "postgres_changes",
@@ -250,6 +261,8 @@ export const usePurchaseStatus = () => {
               startPolling();
             }
           });
+          
+        channelRef.current = channel; // Store the channel in the ref
       } catch (err) {
         console.warn("[usePurchaseStatus] Error setting up realtime:", err);
         setIsRealtimeConnected(false);
@@ -269,7 +282,10 @@ export const usePurchaseStatus = () => {
 
     return () => {
       clearTimeout(timeout);
-      if (channel) supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       stopPolling();
     };
   }, [user, authLoading, checkPurchaseStatus, startPolling, stopPolling]);
