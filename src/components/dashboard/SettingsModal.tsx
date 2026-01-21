@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,61 +117,60 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
           </div>
         ) : (
-          <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                Nome Completo
-              </Label>
-              <Input
-                id="full_name"
-                value={profile.full_name || ""}
-                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                placeholder="Seu nome completo"
-              />
-            </div>
+          <>
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name" className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  Nome Completo
+                </Label>
+                <Input
+                  id="full_name"
+                  value={profile.full_name || ""}
+                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  placeholder="Seu nome completo"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="company_name" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-muted-foreground" />
-                Nome da Empresa
-              </Label>
-              <Input
-                id="company_name"
-                value={profile.company_name || ""}
-                onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                placeholder="Nome da sua empresa"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_name" className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  Nome da Empresa
+                </Label>
+                <Input
+                  id="company_name"
+                  value={profile.company_name || ""}
+                  onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                  placeholder="Nome da sua empresa"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                placeholder="seu@email.com"
-                disabled
-              />
-              <p className="text-xs text-muted-foreground">
-                O email não pode ser alterado aqui.
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={profile.email}
+                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  placeholder="seu@email.com"
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  O email não pode ser alterado aqui.
+                </p>
+              </div>
             </div>
-
-            <div className="flex gap-3 pt-4">
+            <DialogFooter>
               <Button
                 variant="outline"
-                className="flex-1"
                 onClick={() => onOpenChange(false)}
               >
                 Cancelar
               </Button>
               <Button
-                className="flex-1"
                 onClick={handleSave}
                 disabled={saving}
               >
@@ -183,8 +183,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   "Salvar Alterações"
                 )}
               </Button>
-            </div>
-          </div>
+            </DialogFooter>
+          </>
         )}
       </DialogContent>
     </Dialog>

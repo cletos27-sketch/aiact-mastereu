@@ -4,6 +4,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription, // Importado para acessibilidade
+  DialogFooter,      // Importado para acessibilidade
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +23,7 @@ import {
   GraduationCap,
   Lock,
 } from "lucide-react";
-import { jsPDF } from "jspdf"; // Padronizado import
+import { jsPDF } from "jspdf";
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { toast } from "sonner";
 
@@ -571,6 +573,10 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
             <FileText className="h-5 w-5 text-accent" />
             Documentos e Avaliações
           </DialogTitle>
+          {/* Adicionado DialogDescription invisível para acessibilidade */}
+          <DialogDescription className="sr-only">
+            Lista de documentos de conformidade e histórico de avaliações de risco.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
@@ -781,6 +787,8 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
             </div>
           </div>
         </div>
+        {/* Adicionado DialogFooter para acessibilidade */}
+        <DialogFooter className="mt-4" />
       </DialogContent>
     </Dialog>
   );
