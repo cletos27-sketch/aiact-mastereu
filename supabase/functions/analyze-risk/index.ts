@@ -13,6 +13,11 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[ANALYZE-RISK] ${step}${detailsStr}`);
 };
 
+interface QuestionData {
+  id: number;
+  risk_level: string;
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -23,8 +28,6 @@ serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 1. Autenticação do Usuário (Removido bloco de autenticação não utilizado para o cálculo de risco)
-
     // 2. Receber dados do Frontend (esperando 'answers')
     const body = await req.json().catch(() => ({}));
     const answers = body.answers || []; 
@@ -34,6 +37,7 @@ serve(async (req: Request) => {
     }
 
     // 3. Buscar informações das questões no Banco de Dados
+    // NOTE: Assuming 'risk_questions' table exists and contains 'id' and 'risk_level'
     const { data: allQuestions, error: dbError } = await supabaseClient
       .from('risk_questions')
       .select('id, risk_level');
@@ -51,7 +55,7 @@ serve(async (req: Request) => {
 
     logStep("Questões ativadas", triggered);
 
-    const levels = triggered.map((q: any) => String(q.risk_level).toLowerCase().trim());
+    const levels = triggered.map((q: QuestionData) => String(q.risk_level).toLowerCase().trim());
     
     if (levels.includes('prohibited') || levels.includes('proibido')) {
       complianceScore = 0;
@@ -73,6 +77,8 @@ serve(async (req: Request) => {
     const finalResponse = {
       score: complianceScore,
       riskClassification: riskClassification,
+      // Retornando as questões ativadas para o frontend
+      triggeredQuestions: triggered.map((q: QuestionData) => ({ id: q.id, risk_level: q.risk_level }))
     };
 
     return new Response(

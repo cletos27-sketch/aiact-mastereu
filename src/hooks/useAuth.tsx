@@ -36,7 +36,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Ensure we have the necessary data structure
       const classification = assessmentData.riskClassification;
-      const questionsData = assessmentData.questionsData || [];
+      // Usando questionsData que agora inclui a referência legal e o flag triggered
+      const questionsData = assessmentData.questionsData || []; 
       
       // Generate justification and articles based on classification
       const generateLegalJustification = (classification: string, questionsData: any[]): string => {
@@ -124,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user_id: userId,
         user_email: userEmail,
         responses: assessmentData.answers,
-        risk_score: assessmentData.riskScore?.score ?? 0,
+        risk_score: assessmentData.riskScore ?? 0, // Usando riskScore
         risk_classification: classification ?? "RISCO_MINIMO",
         legal_justification: generateLegalJustification(classification, questionsData),
         relevant_articles: getRelevantArticles(classification, questionsData),

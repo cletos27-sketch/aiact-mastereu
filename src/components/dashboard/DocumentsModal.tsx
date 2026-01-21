@@ -21,7 +21,7 @@ import {
   GraduationCap,
   Lock,
 } from "lucide-react";
-import { jsPDF } from "jspdf";
+import { jsPDF } from "jspdf"; // Padronizado import
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { toast } from "sonner";
 
@@ -675,7 +675,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                     legal_justification: latestAssessment.legal_justification,
                     relevant_articles: latestAssessment.relevant_articles,
                     priority_actions: latestAssessment.priority_actions,
-                  } : undefined, 'pt'); // <-- Revertido para 'pt'
+                  } : undefined, 'pt'); // <-- Mantido em Português
                 })}
                 className="flex items-center gap-2"
                 disabled={purchaseLoading || generatingPDF === "literacia"}

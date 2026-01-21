@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // Import toast from sonner
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf"; // Padronizado import
 import {
   Ban,
   Calendar,

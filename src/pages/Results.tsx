@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import PricingCards from "@/components/PricingCards";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf"; // Padronizado import
 import {
   AlertTriangle,
   ArrowRight,

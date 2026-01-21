@@ -290,7 +290,7 @@ const Assessment = () => {
 
   const navigate = useNavigate();
 
-  useAuth(); // Obter a sessão do usuário (session removido)
+  useAuth(); 
 
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -366,111 +366,131 @@ const Assessment = () => {
 
   const handleNext = async () => {
 
-  try {
+    if (currentStep < questions.length - 1) {
 
-    setIsSubmitting(true);
+      setCurrentStep(currentStep + 1);
 
-    
-
-    // 1. Prepara as respostas para a Edge Function
-
-    const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
-
-      questionId: id,
-
-      answer: val
-
-    }));
-
-
-
-    // 2. Chama a Edge Function
-
-    const { data: serverResult, error: funcError } = await supabase.functions.invoke('analyze-risk', {
-
-      body: { answers: formattedAnswers }
-
-    });
-
-
-
-    if (funcError) {
-
-      console.error("Erro na função:", funcError);
-
-      throw funcError;
+      return;
 
     }
 
+    
+
+    // Se for a última questão, processa e navega
+
+    try {
+
+      setIsSubmitting(true);
+
+      
+
+      // 1. Prepara as respostas para a Edge Function
+
+      const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
+
+        questionId: id,
+
+        answer: val
+
+      }));
 
 
-    // 3. Processa os dados para o Frontend (Sem duplicar variáveis)
 
-    const processedQuestions = (questions || []).map((q) => {
+      // 2. Chama a Edge Function
 
-      const isTriggered = Array.isArray(serverResult?.triggeredQuestions) 
+      const { data: serverResult, error: funcError } = await supabase.functions.invoke('analyze-risk', {
 
-        ? serverResult.triggeredQuestions.some((tq: any) => String(tq.id) === String(q.id))
+        body: { answers: formattedAnswers }
 
-        : false;
-
+      });
 
 
-      return {
 
-        id: q.id,
+      if (funcError) {
 
-        question: q.question,
+        console.error("Erro na função:", funcError);
 
-        category: q.category,
+        throw funcError;
 
-        riskType: q.riskType,
+      }
 
-        answer: answers[q.id] === true ? "Sim" : "Não",
 
-        triggersClassification: isTriggered
+
+      // 3. Processa os dados para o Frontend
+
+      // O serverResult agora deve incluir 'triggeredQuestions'
+
+      const triggeredIds = new Set(serverResult?.triggeredQuestions?.map((q: any) => q.id) || []);
+
+      
+
+      const processedQuestions = (questions || []).map((q) => {
+
+        return {
+
+          id: q.id,
+
+          question: q.question,
+
+          category: q.category,
+
+          riskType: q.riskType,
+
+          legalReference: q.legalReference, // Adicionado para garantir que o Results.tsx tenha a referência
+
+          answer: answers[q.id] === true ? "Sim" : "Não",
+
+          triggersClassification: triggeredIds.has(q.id)
+
+        };
+
+      });
+
+
+
+      // 4. OBJETO ÚNICO DE RESULTADO
+
+      const finalAssessmentPayload = {
+
+        riskScore: serverResult?.score ?? 0,
+
+        riskClassification: serverResult?.riskClassification ?? "RISCO_MINIMO",
+
+        questionsData: processedQuestions,
+
+        answers: answers, // Mantendo as respostas originais
+
+        timestamp: new Date().toISOString(),
 
       };
 
-    });
+
+
+      // 5. Limpa o progresso salvo
+
+      sessionStorage.removeItem("assessment_progress");
 
 
 
-    // 4. OBJETO ÚNICO DE RESULTADO (Aqui matamos a duplicidade)
+      // 6. Navega para os resultados
 
-    const finalAssessmentPayload = {
-
-      score: serverResult?.score ?? 0,
-
-      riskClassification: serverResult?.riskClassification ?? "RISCO_MINIMO",
-
-      questionsData: processedQuestions,
-
-      timestamp: new Date().toISOString(),
-
-    };
+      navigate("/results", { state: finalAssessmentPayload });
 
 
 
-    // 5. Navega para os resultados
+    } catch (error: any) {
 
-    navigate("/results", { state: finalAssessmentPayload });
+      console.error("Erro inesperado durante o envio:", error);
 
+      toast.error("Erro ao processar análise. Verifique sua conexão.");
 
+    } finally {
 
-  } catch (error: any) {
+      setIsSubmitting(false);
 
-    console.error("Erro inesperado durante o envio:", error);
+    }
 
-    toast.error("Erro ao processar análise. Verifique sua conexão.");
-
-  } finally {
-
-    setIsSubmitting(false);
-
-  }
-
-};
+  };
 
 
 

@@ -9,7 +9,7 @@ import SettingsModal from "@/components/dashboard/SettingsModal";
 import AssessmentHistory from "@/components/dashboard/AssessmentHistory";
 import DocumentsModal from "@/components/dashboard/DocumentsModal";
 import { PopupModal } from "react-calendly";
-import { jsPDF } from "jspdf";
+import { jsPDF } from "jspdf"; // Padronizado import
 import { generateAILiteracyGuidePDF } from "@/lib/generateAILiteracyGuidePDF";
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
@@ -282,7 +282,7 @@ const Dashboard = () => {
         legal_justification: latestAssessment.legal_justification,
         relevant_articles: latestAssessment.relevant_articles,
         priority_actions: latestAssessment.priority_actions,
-      } : undefined, 'pt'); // <-- Revertido para 'pt'
+      } : undefined, 'pt'); // <-- Mantido em Português
     } catch (error) {
       console.error("Error generating AI Literacy Guide:", error);
     } finally {
