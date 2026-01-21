@@ -277,7 +277,9 @@ const Assessment = () => {
         answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
         triggersClassification: isTriggered
       };
-    }); // <--- Verifique se este parêntese e ponto-e-vírgula estão aqui
+    }); 
+    
+    // <--- Verifique se este parêntese e ponto-e-vírgula estão aqui
 
     // 2. Montar o objeto de dados final
     const assessmentData = {
