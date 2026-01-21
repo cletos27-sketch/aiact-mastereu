@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error parsing pending assessment:", error);
       return false;
     }
-  }, [navigate]); // Removido 'navigate' das dependências, pois não é usado dentro do savePendingAssessment
+  }, [navigate]);
 
   // Function to ensure profile exists
   const ensureProfileExists = useCallback(async (userId: string, userEmail: string, fullName?: string) => {

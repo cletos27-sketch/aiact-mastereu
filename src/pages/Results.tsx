@@ -1,4 +1,4 @@
-import { useLocation, Link, Navigate } from "react-router-dom";
+import { useLocation, Link, Navigate, useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import PricingCards from "@/components/PricingCards";
 import { usePurchaseStatus } from "@/hooks/usePurchaseStatus";
 import { toast } from "sonner";
-import { jsPDF } from "jspdf"; // Padronizado import
+// import { jsPDF } from "jspdf"; // Removido: PDF será gerado no Dashboard
 import {
   AlertTriangle,
   ArrowRight,
@@ -43,10 +43,11 @@ const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
 
 const Results = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // <-- Adicionado
   const { user } = useAuth();
   const [assessmentData, setAssessmentData] = useState<any>(null);
   const { hasCompliancePack, loading: purchaseLoading } = usePurchaseStatus();
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // Mantido para simulação, mas o PDF será gerado no Dashboard
 
   // 1. Definindo variáveis de estado derivadas no topo, com fallback seguro.
   const questionsData = assessmentData?.questionsData || [];
@@ -125,233 +126,32 @@ const Results = () => {
     return actions;
   }, [riskClassification]);
 
-  const generatePDF = useCallback(() => {
+  // Função de geração de PDF simplificada para o botão secundário
+  const handleGeneratePDF = useCallback(() => {
+    // Esta função agora apenas simula a geração e informa o usuário para ir ao Dashboard
     setIsGeneratingPDF(true);
-    
-    try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
-      const contentWidth = pageWidth - 2 * margin;
-      let yPos = 20;
-
-      // Helper function to add text with word wrap
-      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10): number => {
-        doc.setFontSize(fontSize);
-        const lines = doc.splitTextToSize(text, maxWidth);
-        doc.text(lines, x, y);
-        return y + lines.length * (fontSize * 0.4);
-      };
-
-      // Helper to check and add new page if needed
-      const checkNewPage = (neededSpace: number) => {
-        if (yPos + neededSpace > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
-      };
-
-      // Header
-      doc.setFillColor(15, 30, 60); // Navy blue
-      doc.rect(0, 0, pageWidth, 45, "F");
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.text("EU AI-Compliance Master", margin, 20);
-      
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.text("Relatório de Diagnóstico de Conformidade", margin, 30);
-      
-      doc.setFontSize(9);
-      doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-PT", { 
-        day: "2-digit", 
-        month: "long", 
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      })}`, margin, 40);
-
-      yPos = 60;
-
-      // Risk Classification Box
-      const riskLabels: Record<RiskClassification, string> = {
-        PROIBIDO: "SISTEMA PROIBIDO",
-        ALTO_RISCO: "ALTO RISCO",
-        RISCO_LIMITADO: "RISCO LIMITADO",
-        RISCO_MINIMO: "RISCO MÍNIMO",
-        FORA_DE_ESCOPO: "FORA DO ÂMBITO"
-      };
-
-      const riskColors: Record<RiskClassification, [number, number, number]> = {
-        PROIBIDO: [220, 38, 38],
-        ALTO_RISCO: [234, 88, 12],
-        RISCO_LIMITADO: [202, 138, 4],
-        RISCO_MINIMO: [22, 163, 74],
-        FORA_DE_ESCOPO: [100, 116, 139]
-      };
-
-      const [r, g, b] = riskColors[riskClassification as RiskClassification]; // Adicionado type assertion
-      
-      doc.setFillColor(r, g, b);
-      doc.roundedRect(margin, yPos, contentWidth, 25, 3, 3, "F");
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Classificação: ${riskLabels[riskClassification as RiskClassification]}`, pageWidth / 2, yPos + 16, { align: "center" }); // Adicionado type assertion
-
-      yPos += 40;
-
-      // Legal Justification Section
-      doc.setTextColor(15, 30, 60);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("1. Justificativa Legal", margin, yPos);
-      
-      yPos += 8;
-      doc.setDrawColor(200, 168, 87); // Gold
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPos, margin + 40, yPos);
-      
-      yPos += 10;
-      doc.setTextColor(60, 60, 60);
-      doc.setFont("helvetica", "normal");
-      yPos = addWrappedText(generateLegalJustification(), margin, yPos, contentWidth, 10);
-
-      yPos += 15;
-      checkNewPage(50);
-
-      // Triggered Questions
-      const triggeredQs = questionsData?.filter((q: QuestionData) => q.triggersClassification) || [];
-      if (triggeredQs.length > 0) {
-        doc.setTextColor(15, 30, 60);
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("2. Questões Determinantes", margin, yPos);
-        
-        yPos += 8;
-        doc.setDrawColor(200, 168, 87);
-        doc.line(margin, yPos, margin + 50, yPos);
-        
-        yPos += 10;
-        
-        triggeredQs.forEach((q: QuestionData, idx: number) => {
-          checkNewPage(25);
-          doc.setFillColor(245, 245, 245);
-          doc.roundedRect(margin, yPos - 5, contentWidth, 20, 2, 2, "F");
-          
-          doc.setTextColor(60, 60, 60);
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          doc.text(`${idx + 1}.`, margin + 5, yPos + 3);
-          
-          doc.setFont("helvetica", "normal");
-          const questionLines = doc.splitTextToSize(q.question, contentWidth - 25);
-          doc.text(questionLines, margin + 15, yPos + 3);
-          
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(8);
-          doc.text(q.legalReference, margin + 15, yPos + 12);
-          
-          yPos += 22;
-        });
-      }
-
-      yPos += 10;
-      checkNewPage(60);
-
-      // Relevant Articles
-      doc.setTextColor(15, 30, 60);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("3. Artigos Relevantes do EU AI Act", margin, yPos);
-      
-      yPos += 8;
-      doc.setDrawColor(200, 168, 87);
-      doc.line(margin, yPos, margin + 60, yPos);
-      
-      yPos += 10;
-      
-      const articles = getRelevantArticles();
-      articles.forEach((article) => {
-        checkNewPage(10);
-        doc.setFillColor(200, 168, 87);
-        doc.circle(margin + 3, yPos - 2, 1.5, "F");
-        
-        doc.setTextColor(60, 60, 60);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.text(article, margin + 10, yPos);
-        yPos += 8;
-      });
-
-      yPos += 15;
-      checkNewPage(60);
-
-      // Priority Actions
-      doc.setTextColor(15, 30, 60);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("4. Ações Prioritárias", margin, yPos);
-      
-      yPos += 8;
-      doc.setDrawColor(200, 168, 87);
-      doc.line(margin, yPos, margin + 40, yPos);
-      
-      yPos += 10;
-      
-      const actions = getPriorityActions();
-      actions.forEach((action, idx) => {
-        checkNewPage(12);
-        doc.setFillColor(22, 163, 74);
-        doc.roundedRect(margin, yPos - 4, 5, 5, 1, 1, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.text(`${idx + 1}`, margin + 1.5, yPos);
-        
-        doc.setTextColor(60, 60, 60);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        yPos = addWrappedText(action, margin + 10, yPos, contentWidth - 10, 10);
-        yPos += 4;
-      });
-
-      // Footer
-      const totalPages = doc.internal.pages.length; // Corrigido: Usar o número total de páginas
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFillColor(15, 30, 60);
-        doc.rect(0, 285, pageWidth, 12, "F");
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text("EU AI-Compliance Master | Regulamento (UE) 2024/1689", margin, 291);
-        doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 291, { align: "right" });
-      }
-
-      // Save the PDF
-      const fileName = `EU-AI-Act-Diagnostico-${new Date().toISOString().split("T")[0]}.pdf`;
-      doc.save(fileName);
-      
-      toast.success("PDF gerado com sucesso!");
-    } catch (error: any) { // Captura o erro para exibir a mensagem
-      console.error("Error generating PDF:", error);
-      toast.error(`Erro ao gerar PDF do relatório: ${error.message || 'Erro desconhecido'}`);
-    } finally {
+    toast.info("O relatório completo será gerado no seu Dashboard.", {
+      description: "Aceda ao Dashboard para baixar o PDF com o histórico de avaliações.",
+      duration: 3000,
+    });
+    setTimeout(() => {
       setIsGeneratingPDF(false);
-    }
-  }, [riskClassification, questionsData, generateLegalJustification, getRelevantArticles, getPriorityActions]);
+      if (user) {
+        // Se o usuário estiver logado, redireciona para o dashboard
+        navigate("/dashboard");
+      } else {
+        // Se não estiver logado, incentiva o login
+        navigate("/login");
+      }
+    }, 1500);
+  }, [user, navigate]); // <-- 'navigate' adicionado como dependência
 
   // Effect to load assessment data from location.state or localStorage
   useEffect(() => {
     if (location.state && !assessmentData) {
       setAssessmentData(location.state);
-      // Limpa o localStorage após carregar o estado
-      localStorage.removeItem(PENDING_ASSESSMENT_KEY);
+      // Salva no localStorage para persistência em caso de login/refresh
+      localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(location.state));
     } else if (!assessmentData) {
       const storedData = localStorage.getItem(PENDING_ASSESSMENT_KEY);
       if (storedData) {
@@ -726,7 +526,7 @@ const Results = () => {
               </h2>
               <p className="text-primary-foreground/80 mb-8">
                 {user 
-                  ? "Acompanhe seu progresso, baixe documentos e gerencie sua conformidade."
+                  ? "Sua avaliação foi salva. Acesse o Dashboard para baixar o relatório completo e gerenciar sua conformidade."
                   : "Crie uma conta gratuita para salvar seus resultados e acessar recursos exclusivos."
                 }
               </p>
@@ -740,7 +540,7 @@ const Results = () => {
                 <Button 
                   variant="heroOutline" 
                   size="lg"
-                  onClick={generatePDF}
+                  onClick={handleGeneratePDF}
                   disabled={isGeneratingPDF}
                 >
                   {isGeneratingPDF ? (
@@ -748,7 +548,7 @@ const Results = () => {
                   ) : (
                     <Download className="w-5 h-5" />
                   )}
-                  {isGeneratingPDF ? "Gerando..." : "Baixar Relatório PDF"}
+                  {isGeneratingPDF ? "Redirecionando..." : "Baixar Relatório PDF"}
                 </Button>
               </div>
             </div>
