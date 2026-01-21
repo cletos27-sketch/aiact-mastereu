@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 
-const logStep = (step: string, details?: any) => {
+const_logStep = (step: string, details?: any) => {
   console.log(`[ASSESSMENT] ${step}`, details || "");
 };
 
