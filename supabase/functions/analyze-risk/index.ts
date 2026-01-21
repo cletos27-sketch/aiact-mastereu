@@ -98,10 +98,7 @@ serve(async (req) => {
         risk_score: complianceScore,
         risk_classification: riskClassification
       }).catch(err => console.error("Erro ao salvar:", err));
-    }
-
-      .select()
-      .single();
+    }      
 
     if (insertError) logStep("Warning: Could not save assessment", insertError);
 
