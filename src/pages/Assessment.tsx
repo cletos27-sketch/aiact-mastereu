@@ -260,29 +260,34 @@ const Assessment = () => {
           };
         }
 
-        const questionsDataForDisplay = questions.map(q) => // ... dentro do seu map de questões
-        const isTriggered = (serverResult?.triggeredQuestions || []).some(
-           (tq: any) => String(tq.id || tq.question_id) === String(q.id)
-             );
+        / 1. Criar os dados para exibição com segurança absoluta
+    const questionsDataForDisplay = (questions || []).map((q) => {
+      const answered = answers[q.id];
+      
+      // Proteção contra o erro 'some': verifica se serverResult e triggeredQuestions existem
+      const isTriggered = Array.isArray(serverResult?.triggeredQuestions) 
+        ? serverResult.triggeredQuestions.some((tq: any) => String(tq.id || tq.question_id) === String(q.id))
+        : false;
+        
+      return {
+        id: q.id,
+        question: q.question,
+        category: q.category,
+        riskType: q.riskType,
+        legalReference: q.legalReference,
+        answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
+        triggersClassification: isTriggered
+      };
+    });
 
-        return {
-            id: q.id,
-            question: q.question,
-            category: q.category,
-            riskType: q.riskType,
-            legalReference: q.legalReference,
-            answer: answered === true ? "Sim" : answered false ? "Não" : "Não respondida",
-            triggersClassification: isTriggered
-};
-// ... fecha o map
-
-            const assessmentData = {
-             answers,
-             riskScore: serverResult?.score ?? 0,
-             questionsData: questionsDataForDisplay || [],
-             riskClassification: serverResult?.riskClassification ?? "RISCO_MINIMO",
-             timestamp: new Date().toISOString(),
-             };
+    // 2. Montar o objeto de dados final para a página de Resultados
+    const assessmentData = {
+      answers,
+      riskScore: typeof serverResult?.score === 'number' ? serverResult.score : 0,
+      questionsData: questionsDataForDisplay,
+      riskClassification: serverResult?.riskClassification || "RISCO_MINIMO",
+      timestamp: new Date().toISOString(),
+    };
         
         // Clear session storage progress since assessment is complete
         sessionStorage.removeItem("assessment_progress");
