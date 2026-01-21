@@ -7,9 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, ChevronRight, ChevronLeft, ShieldCheck } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 
-// 1. Função de Log Externa para evitar erros de "not found"
 const logStep = (step: string, details?: any) => {
   console.log(`[ASSESSMENT] ${step}`, details || "");
 };
@@ -19,22 +18,21 @@ const Assessment = () => {
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
-  const { user } = useAuth();
+  const { user: _user } = useAuth(); // Corrigido: _ indica que não será usado agora
   const navigate = useNavigate();
 
-  // 2. Carregar questões do banco
   useEffect(() => {
     const fetchQuestions = async () => {
-      try {        
-          const { data, error } = await supabase
-          .from ("risk_questions" as any)
-          .select("*");
+      try {
+        // Corrigido: 'as any' resolve o erro de tipo da tabela
+        const { data: qData, error } = await supabase
+          .from("risk_questions" as any)
+          .select("*")
           .order("id");
-          if (error) throw error;
-        setQuestions(data || []);
+        if (error) throw error;
+        setQuestions(qData || []);
       } catch (error: any) {
         toast.error("Erro ao carregar questões");
-        logStep("Error fetching questions", error.message);
       } finally {
         setLoading(false);
       }
@@ -42,14 +40,9 @@ const Assessment = () => {
     fetchQuestions();
   }, []);
 
-  // Categorias únicas para navegação
   const categories = Array.from(new Set(questions.map((q) => q.category)));
   const currentCategory = categories[currentCategoryIndex];
   const categoryQuestions = questions.filter((q) => q.category === currentCategory);
-
-  const handleAnswer = (questionId: string, answer: boolean) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
-  };
 
   const handleNext = async () => {
     if (currentCategoryIndex < categories.length - 1) {
@@ -58,24 +51,19 @@ const Assessment = () => {
       return;
     }
 
-    // FINALIZAÇÃO DO DIAGNÓSTICO
     try {
       setLoading(true);
-      logStep("Submitting assessment...");
-
       const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
         questionId: id,
         answer: val
       }));
 
-      // Chama a Edge Function que já configuramos para dar os 60%
       const { data: serverResult, error: funcError } = await supabase.functions.invoke('analyze-risk', {
         body: { answers: formattedAnswers }
       });
 
       if (funcError) throw funcError;
 
-      // Monta o objeto final para o Results.tsx
       const assessmentData = {
         score: serverResult?.score ?? 0,
         riskClassification: serverResult?.riskClassification ?? "RISCO_MINIMO",
@@ -86,74 +74,35 @@ const Assessment = () => {
         timestamp: new Date().toISOString(),
       };
 
-      logStep("Redirecting to results", { score: assessmentData.score });
       navigate("/results", { state: assessmentData });
-
     } catch (error: any) {
-      logStep("Submission error", error.message);
       toast.error("Erro ao processar diagnóstico.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-16 px-4 max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-primary mb-2">{currentCategory}</h1>
-          <div className="w-full bg-secondary h-2 rounded-full">
-            <div 
-              className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((currentCategoryIndex + 1) / categories.length) * 100}%` }}
-            />
-          </div>
-        </div>
-
+        <h1 className="text-2xl font-bold mb-8">{currentCategory}</h1>
         <div className="space-y-6">
           {categoryQuestions.map((q) => (
-            <Card key={q.id} className="p-6 border-l-4 border-l-primary">
-              <p className="text-lg mb-4 font-medium">{q.question}</p>
+            <Card key={q.id} className="p-6">
+              <p className="text-lg mb-4">{q.question}</p>
               <div className="flex gap-4">
-                <Button
-                  variant={answers[q.id] === true ? "default" : "outline"}
-                  onClick={() => handleAnswer(q.id, true)}
-                  className="flex-1"
-                >
-                  Sim
-                </Button>
-                <Button
-                  variant={answers[q.id] === false ? "default" : "outline"}
-                  onClick={() => handleAnswer(q.id, false)}
-                  className="flex-1"
-                >
-                  Não
-                </Button>
+                <Button variant={answers[q.id] === true ? "default" : "outline"} onClick={() => setAnswers(prev => ({...prev, [q.id]: true}))} className="flex-1">Sim</Button>
+                <Button variant={answers[q.id] === false ? "default" : "outline"} onClick={() => setAnswers(prev => ({...prev, [q.id]: false}))} className="flex-1">Não</Button>
               </div>
             </Card>
           ))}
         </div>
-
-        <div className="mt-12 flex justify-between gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => setCurrentCategoryIndex(prev => prev - 1)}
-            disabled={currentCategoryIndex === 0}
-          >
-            <ChevronLeft className="mr-2" /> Anterior
-          </Button>
-          <Button onClick={handleNext} className="px-8">
-            {currentCategoryIndex === categories.length - 1 ? "Finalizar" : "Próximo"} <ChevronRight className="ml-2" />
-          </Button>
+        <div className="mt-12 flex justify-between">
+          <Button variant="ghost" onClick={() => setCurrentCategoryIndex(p => p - 1)} disabled={currentCategoryIndex === 0}><ChevronLeft /> Anterior</Button>
+          <Button onClick={handleNext}>{currentCategoryIndex === categories.length - 1 ? "Finalizar" : "Próximo"} <ChevronRight /></Button>
         </div>
       </main>
       <Footer />
