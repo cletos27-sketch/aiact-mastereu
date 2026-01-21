@@ -282,7 +282,7 @@ const Dashboard = () => {
         legal_justification: latestAssessment.legal_justification,
         relevant_articles: latestAssessment.relevant_articles,
         priority_actions: latestAssessment.priority_actions,
-      } : undefined);
+      } : undefined, 'en'); // <-- Pass 'en' here
     } catch (error) {
       console.error("Error generating AI Literacy Guide:", error);
     } finally {
@@ -1051,9 +1051,7 @@ const Dashboard = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          canDownload ? "bg-accent/10" : "bg-muted"
-                        }`}>
+                        <div className={`w-10 h-10 rounded-lg bg-muted flex items-center justify-center`}>
                           <DocIcon className={`w-5 h-5 ${canDownload ? "text-accent" : "text-muted-foreground"}`} />
                         </div>
                         <div>

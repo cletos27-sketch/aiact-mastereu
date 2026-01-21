@@ -1,4 +1,6 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
@@ -11,26 +13,25 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[ANALYZE-RISK] ${step}${detailsStr}`);
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    // CORREÇÃO: Declaramos o cliente apenas UMA vez
+    // @ts-ignore
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    // @ts-ignore
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 1. Autenticação do Usuário
-    const authHeader = req.headers.get('Authorization');
-    let userId = null;
-    if (authHeader) {
-      const { data: userData } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
-      userId = userData?.user?.id;
-    }
+    // 1. Autenticação do Usuário (Removido bloco de autenticação não utilizado para o cálculo de risco)
 
-    // 2. Receber dados do Frontend (com trava de segurança)
+    // 2. Receber dados do Frontend (esperando 'answers')
     const body = await req.json().catch(() => ({}));
-    const answers = body.answers || [];
+    const answers = body.answers || []; 
+
+    if (!Array.isArray(answers)) {
+        throw new Error("Invalid input format: 'answers' must be an array.");
+    }
 
     // 3. Buscar informações das questões no Banco de Dados
     const { data: allQuestions, error: dbError } = await supabaseClient
@@ -68,21 +69,10 @@ serve(async (req) => {
 
     logStep("Analysis complete", { classification: riskClassification, score: complianceScore });
 
-    // 6. Salvar Resultado com tratamento de erro
-    if (userId) {
-      const { error: insertError } = await supabaseClient.from('risk_assessments').insert({
-        user_id: userId,
-        risk_score: complianceScore,
-        risk_classification: riskClassification
-      });
-      if (insertError) logStep("Warning: Could not save assessment", insertError);
-    }      
-
-    // 8. Retorno Final Consolidado
+    // 6. Retorno Final Consolidado
     const finalResponse = {
       score: complianceScore,
       riskClassification: riskClassification,
-      questionsData: answers
     };
 
     return new Response(

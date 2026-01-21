@@ -675,7 +675,7 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                     legal_justification: latestAssessment.legal_justification,
                     relevant_articles: latestAssessment.relevant_articles,
                     priority_actions: latestAssessment.priority_actions,
-                  } : undefined);
+                  } : undefined, 'en'); // <-- Pass 'en' here
                 })}
                 className="flex items-center gap-2"
                 disabled={purchaseLoading || generatingPDF === "literacia"}
@@ -755,26 +755,26 @@ const DocumentsModal = ({ open, onOpenChange }: DocumentsModalProps) => {
                           PDF • {canDownload ? "Gerado dinamicamente" : "Conteúdo Premium"}
                         </p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAccessCheck(isPremiumDoc, () => generateDocumentPDF(docType, latestAssessment))}
+                        disabled={isDisabled}
+                        className={`transition-opacity ${
+                          canDownload 
+                            ? "opacity-70 group-hover:opacity-100" 
+                            : "opacity-50"
+                        }`}
+                      >
+                        {isGenerating || purchaseLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : canDownload ? (
+                          <Download className="h-4 w-4" />
+                        ) : (
+                          <Lock className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleAccessCheck(isPremiumDoc, () => generateDocumentPDF(docType, latestAssessment))}
-                      disabled={isDisabled}
-                      className={`transition-opacity ${
-                        canDownload 
-                          ? "opacity-70 group-hover:opacity-100" 
-                          : "opacity-50"
-                      }`}
-                    >
-                      {isGenerating || purchaseLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : canDownload ? (
-                        <Download className="h-4 w-4" />
-                      ) : (
-                        <Lock className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
                 );
               })}

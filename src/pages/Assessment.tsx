@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -286,19 +286,11 @@ const questions: Question[] = [
 
 
 
-type RiskClassification = "PROIBIDO" | "ALTO_RISCO" | "RISCO_LIMITADO" | "RISCO_MINIMO" | "FORA_DE_ESCOPO";
-
-
-
-const PENDING_ASSESSMENT_KEY = "pending_assessment_data";
-
-
-
 const Assessment = () => {
 
   const navigate = useNavigate();
 
-  const { session } = useAuth(); // Obter a sessão do usuário
+  useAuth(); // Obter a sessão do usuário (session removido)
 
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -372,37 +364,11 @@ const Assessment = () => {
 
 
 
-  // New function to handle finalization of the diagnostic
-
-  const aoFinalizarDiagnostico = useCallback((dados: any) => {
-
-    // 1. Salva no "bolso" do navegador (localStorage)
-
-    localStorage.setItem(PENDING_ASSESSMENT_KEY, JSON.stringify(dados));
-
-    
-
-    // 2. Redireciona
-
-    if (session?.user) { // Se o usuário estiver logado, redireciona para o dashboard
-
-      navigate('/dashboard');
-
-    } else { // Caso contrário, redireciona para a página de resultados
-
-      navigate('/results'); 
-
-    }
-
-  }, [navigate, session?.user]); // Adicionar session?.user às dependências
-
-
-
   const handleNext = async () => {
 
   try {
 
-    logStep("Submitting assessment", { answersCount: Object.keys(answers).length });
+    setIsSubmitting(true);
 
     
 
@@ -486,10 +452,6 @@ const Assessment = () => {
 
 
 
-    logStep("Navigation to results", finalAssessmentPayload);
-
-
-
     // 5. Navega para os resultados
 
     navigate("/results", { state: finalAssessmentPayload });
@@ -501,6 +463,10 @@ const Assessment = () => {
     console.error("Erro inesperado durante o envio:", error);
 
     toast.error("Erro ao processar análise. Verifique sua conexão.");
+
+  } finally {
+
+    setIsSubmitting(false);
 
   }
 
