@@ -279,23 +279,19 @@ const Assessment = () => {
       };
     }); 
         
-    // 2. Montar o objeto de dados final
+    // APAGUE qualquer outra linha que comece com "const assessmentData" antes ou depois desta
     const assessmentData = {
       answers,
       riskScore: typeof serverResult?.score === 'number' ? serverResult.score : 0,
-      questionsData: questionsDataForDisplay,
+      questionsData: questionsDataForDisplay || [],
       riskClassification: serverResult?.riskClassification || "RISCO_MINIMO",
       timestamp: new Date().toISOString(),
     };
 
-    // 2. Montar o objeto de dados final para a página de Resultados
-    const assessmentData = {
-      answers,
-      riskScore: typeof serverResult?.score === 'number' ? serverResult.score : 0,
-      questionsData: questionsDataForDisplay,
-      riskClassification: serverResult?.riskClassification || "RISCO_MINIMO",
-      timestamp: new Date().toISOString(),
-    };
+    logStep("Final assessment data prepared", assessmentData);
+
+    // 4. Navegar para a página de resultados
+    navigate("/results", { state: assessmentData });
         
         // Clear session storage progress since assessment is complete
         sessionStorage.removeItem("assessment_progress");
