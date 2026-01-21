@@ -27,7 +27,9 @@ const Assessment = () => {
     const fetchQuestions = async () => {
       try {
         const { data, error } = await supabase
-          .from("risk_questions")
+          const { data, error } = await supabase
+          .from ("risk_questions" as any).select("*")
+          .order("id");
           .select("*")
           .order("id");
         if (error) throw error;
