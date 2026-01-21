@@ -18,7 +18,7 @@ interface Question {
   helpText?: string;
   legalReference: string;
 }
-
+  
 const questions: Question[] = [
   {
     id: 1,
