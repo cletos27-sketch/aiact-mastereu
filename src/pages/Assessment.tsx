@@ -199,73 +199,29 @@ const Assessment = () => {
   }, [navigate, session?.user]); // Adicionar session?.user às dependências
 
   const handleNext = async () => {
-    if (currentStep < questions.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Final question, submit to Supabase Edge Function
-      setIsSubmitting(true);
-      try {
-        const formattedResponses = Object.keys(answers).reduce((acc, key) => {
-          acc[`q${key}`] = answers[parseInt(key)] ? "yes" : "no";
-          return acc;
-        }, {} as Record<string, string>);
+  try {
+    logStep("Submitting assessment", { answersCount: Object.keys(answers).length });
+    
+    // 1. Prepara as respostas para a Edge Function
+    const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
+      questionId: id,
+      answer: val
+    }));
 
-        const token = session?.access_token;
-        // If user is not logged in, we still want to proceed to results,
-        // but the assessment won't be saved to DB until they log in.
-        // The PENDING_ASSESSMENT_KEY will ensure data is available.
+    // 2. Chama a Edge Function
+    const { data: serverResult, error: funcError } = await supabase.functions.invoke('analyze-risk', {
+      body: { answers: formattedAnswers }
+    });
 
-        let serverResult: any;
-        if (token) {
-          const { data, error } = await supabase.functions.invoke('analyze-risk', {
-            body: JSON.stringify({ responses: formattedResponses, questions: questions }), // <--- Adicionado o array de questions aqui
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
+    if (funcError) {
+      console.error("Erro na função:", funcError);
+      throw funcError;
+    }
 
-          if (error) {
-            console.error("Error invoking analyze-risk function:", error);
-            toast.error(`Erro ao analisar risco: ${error.message}`);
-            // Proceed with a default or client-side calculation if server fails
-            // For now, we'll just return to avoid blank page, but ideally
-            // a fallback risk calculation would be here.
-            setIsSubmitting(false);
-            return; 
-          }
-          serverResult = data;
-        } else {
-          // Fallback for unauthenticated users: client-side risk calculation
-          // This is a simplified version for demonstration.
-          // In a real app, you'd replicate the server-side logic here or
-          // ensure login is mandatory before final submission.
-          const prohibitedTriggered = questions.some(q => q.riskType === "prohibited" && answers[q.id]);
-          const highRiskTriggered = questions.some(q => q.riskType === "high" && answers[q.id]);
-          const limitedRiskTriggered = questions.some(q => q.riskType === "limited" && answers[q.id]);
-          const outOfScopeTriggered = questions.some(q => q.riskType === "out_of_scope" && answers[q.id]);
-
-          let riskClassification: RiskClassification = "RISCO_MINIMO";
-          if (outOfScopeTriggered) riskClassification = "FORA_DE_ESCOPO";
-          else if (prohibitedTriggered) riskClassification = "PROIBIDO";
-          else if (highRiskTriggered) riskClassification = "ALTO_RISCO";
-          else if (limitedRiskTriggered) riskClassification = "RISCO_LIMITADO";
-
-          const triggeredQuestions = questions.filter(q => answers[q.id] && (q.riskType === "prohibited" || q.riskType === "high" || q.riskType === "limited"));
-          
-          serverResult = {
-            riskScore: { score: 0, maxScore: 0, percentage: 0 }, // Placeholder
-            riskClassification: riskClassification,
-            triggeredQuestions: triggeredQuestions.map(q => ({ question: `q${q.id}`, riskType: q.riskType })),
-          };
-        }
-       
-      const questionsDataForDisplay = (questions || []).map((q) => {
-      const answered = answers[q.id];
-      
-      // Proteção contra o erro 'some'
+    // 3. Processa os dados para o Frontend (Sem duplicar variáveis)
+    const processedQuestions = (questions || []).map((q) => {
       const isTriggered = Array.isArray(serverResult?.triggeredQuestions) 
-        ? serverResult.triggeredQuestions.some((tq: any) => String(tq.id || tq.question_id) === String(q.id))
+        ? serverResult.triggeredQuestions.some((tq: any) => String(tq.id) === String(q.id))
         : false;
 
       return {
@@ -273,40 +229,29 @@ const Assessment = () => {
         question: q.question,
         category: q.category,
         riskType: q.riskType,
-        legalReference: q.legalReference,
-        answer: answered === true ? "Sim" : answered === false ? "Não" : "Não respondida",
+        answer: answers[q.id] === true ? "Sim" : "Não",
         triggersClassification: isTriggered
       };
-    }); 
-        
-    // APAGUE qualquer outra linha que comece com "const assessmentData" antes ou depois desta
-    const assessmentData = {
-      answers,
-      riskScore: typeof serverResult?.score === 'number' ? serverResult.score : 0,
-      questionsData: questionsDataForDisplay || [],
-      riskClassification: serverResult?.riskClassification || "RISCO_MINIMO",
+    });
+
+    // 4. OBJETO ÚNICO DE RESULTADO (Aqui matamos a duplicidade)
+    const finalAssessmentPayload = {
+      score: serverResult?.score ?? 0,
+      riskClassification: serverResult?.riskClassification ?? "RISCO_MINIMO",
+      questionsData: processedQuestions,
       timestamp: new Date().toISOString(),
     };
 
-    logStep("Final assessment data prepared", assessmentData);
+    logStep("Navigation to results", finalAssessmentPayload);
 
-    // 4. Navegar para a página de resultados
-    navigate("/results", { state: assessmentData });
-        
-        // Clear session storage progress since assessment is complete
-        sessionStorage.removeItem("assessment_progress");
+    // 5. Navega para os resultados
+    navigate("/results", { state: finalAssessmentPayload });
 
-        // Use the new function to finalize the diagnostic
-        aoFinalizarDiagnostico(assessmentData);
-
-      } catch (error: any) {
-        console.error("Unexpected error during assessment submission:", error);
-        toast.error(`Erro inesperado: ${error.message}`);
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
+  } catch (error: any) {
+    console.error("Erro inesperado durante o envio:", error);
+    toast.error("Erro ao processar análise. Verifique sua conexão.");
+  }
+};
 
   const handleBack = () => {
     if (currentStep > 0) {
